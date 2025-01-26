@@ -21,6 +21,10 @@ namespace WebApi.MappingProfiles
 
             CreateMap<Author, AuthorEntity>().ReverseMap();
             CreateMap<Book, BookEntity>().ReverseMap();
+
+            CreateMap<User, UserEntity>().ReverseMap();
+
+            CreateMap<RegisterUserDto, User>();
         }
     }
 }

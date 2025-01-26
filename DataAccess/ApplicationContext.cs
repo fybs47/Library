@@ -4,10 +4,15 @@ using DataAccess.Configurations;
 
 namespace DataAccess
 {
-    public class ApplicationContext(DbContextOptions<ApplicationContext> options) : DbContext(options)
+    public class ApplicationContext : DbContext
     {
+        public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
+        {
+        }
+
         public DbSet<BookEntity> Books { get; set; }
         public DbSet<AuthorEntity> Authors { get; set; }
+        public DbSet<UserEntity> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -15,7 +20,7 @@ namespace DataAccess
 
             modelBuilder.ApplyConfiguration(new BookEntityConfiguration());
             modelBuilder.ApplyConfiguration(new AuthorEntityConfiguration());
-            
+            modelBuilder.ApplyConfiguration(new UserEntityConfiguration());
         }
     }
 }
