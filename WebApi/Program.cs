@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using DataAccess;
 using DataAccess.Repositories;
 using Application.Services;
+using AutoMapper;
+using WebApi.MappingProfiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,8 @@ builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
 
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
+
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
