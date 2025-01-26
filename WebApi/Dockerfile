@@ -7,17 +7,17 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Lybriry-test-app/Lybriry-test-app.csproj", "Lybriry-test-app/"]
-RUN dotnet restore "Lybriry-test-app/Lybriry-test-app.csproj"
+COPY ["Library-test-app/Library-test-app.csproj", "Library-test-app/"]
+RUN dotnet restore "Library-test-app/Library-test-app.csproj"
 COPY . .
-WORKDIR "/src/Lybriry-test-app"
-RUN dotnet build "Lybriry-test-app.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Library-test-app"
+RUN dotnet build "Library-test-app.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Lybriry-test-app.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "library-test-app.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Lybriry-test-app.dll"]
+ENTRYPOINT ["dotnet", "Library-test-app.dll"]

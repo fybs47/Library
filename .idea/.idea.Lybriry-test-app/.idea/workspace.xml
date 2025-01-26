@@ -9,7 +9,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a4b77264-9968-4d56-b426-f19d102a720a" name="Changes" comment="Init&#10;Initializing the Project." />
+    <list default="true" id="a4b77264-9968-4d56-b426-f19d102a720a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/WebApi/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/WebApi/Dockerfile" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -18,9 +20,15 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "fybs47"
+  }
+}]]></component>
   <component name="GithubPullRequestsUISettings"><![CDATA[{
   "selectedUrlAndAccountId": {
-    "url": "https://github.com/fybs47/Lybriry-test-app.git",
+    "url": "https://github.com/fybs47/Library-test-app.git",
     "accountId": "3b57464c-8c64-4fa6-b9ba-8e9fc9abcd41"
   }
 }]]></component>
@@ -58,6 +66,11 @@
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "settings.qodana",
     "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "postgresql"
+    ]
   }
 }]]></component>
   <component name="RunManager" selected=".NET Launch Settings Profile.Lybriry-test-app: http">
@@ -149,7 +162,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1737639980009</updated>
-      <workItem from="1737639981048" duration="1100000" />
+      <workItem from="1737639981048" duration="1967000" />
     </task>
     <task id="LOCAL-00001" summary="Init&#10;Initializing the Project.">
       <option name="closed" value="true" />
@@ -159,7 +172,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737640450079</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Corrected the mistake in the title">
+      <option name="closed" value="true" />
+      <created>1737641237273</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1737641237273</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -178,7 +199,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="master" />
+                        <option value="fitch-1-RepositoryLayer" />
                       </list>
                     </value>
                   </entry>
@@ -193,7 +214,8 @@
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="Init&#10;Initializing the Project." />
-    <option name="LAST_COMMIT_MESSAGE" value="Init&#10;Initializing the Project." />
+    <MESSAGE value="Corrected the mistake in the title" />
+    <option name="LAST_COMMIT_MESSAGE" value="Corrected the mistake in the title" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
