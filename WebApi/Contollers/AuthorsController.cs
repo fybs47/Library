@@ -22,6 +22,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetAllAuthors()
         {
             var authors = await _authorService.GetAllAuthorsAsync();
@@ -30,6 +31,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetAuthorById(Guid id)
         {
             var author = await _authorService.GetAuthorByIdAsync(id);
@@ -42,6 +44,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "WritePolicy")]
         public async Task<IActionResult> AddAuthor([FromBody] CreateAuthorDto createAuthorDto)
         {
             var author = _mapper.Map<Author>(createAuthorDto);
@@ -51,6 +54,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "UpdatePolicy")]
         public async Task<IActionResult> UpdateAuthor(Guid id, [FromBody] UpdateAuthorDto updateAuthorDto)
         {
             if (id != updateAuthorDto.Id)
@@ -64,6 +68,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "DeletePolicy")]
         public async Task<IActionResult> DeleteAuthor(Guid id)
         {
             await _authorService.DeleteAuthorAsync(id);
@@ -71,6 +76,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("{id}/books")]
+        [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetBooksByAuthor(Guid id)
         {
             var books = await _authorService.GetBooksByAuthorAsync(id);

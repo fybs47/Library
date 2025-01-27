@@ -1,6 +1,5 @@
 using Application.Abstractions;
 using AutoMapper;
-using Application.Services;
 using Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +22,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetAllBooks()
         {
             var books = await _bookService.GetAllBooksAsync();
@@ -31,6 +31,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetBookById(Guid id)
         {
             var book = await _bookService.GetBookByIdAsync(id);
@@ -43,6 +44,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("isbn/{isbn}")]
+        [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetBookByISBN(string isbn)
         {
             var book = await _bookService.GetBookByISBNAsync(isbn);
@@ -55,6 +57,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "WritePolicy")]
         public async Task<IActionResult> AddBook([FromBody] CreateBookDto createBookDto)
         {
             var book = _mapper.Map<Book>(createBookDto);
@@ -64,6 +67,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "UpdatePolicy")]
         public async Task<IActionResult> UpdateBook(Guid id, [FromBody] UpdateBookDto updateBookDto)
         {
             if (id != updateBookDto.Id)
@@ -77,6 +81,7 @@ namespace WebApi.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "DeletePolicy")]
         public async Task<IActionResult> DeleteBook(Guid id)
         {
             await _bookService.DeleteBookAsync(id);
@@ -84,6 +89,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("{id}/borrow")]
+        [Authorize(Policy = "WritePolicy")]
         public async Task<IActionResult> BorrowBook(Guid id, [FromBody] BorrowBookDto borrowBookDto)
         {
             if (id != borrowBookDto.BookId)
@@ -97,6 +103,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("{id}/addImage")]
+        [Authorize(Policy = "WritePolicy")]
         public async Task<IActionResult> AddBookImage(Guid id, [FromBody] AddBookImageDto addBookImageDto)
         {
             if (id != addBookImageDto.BookId)

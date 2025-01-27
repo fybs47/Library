@@ -74,6 +74,32 @@ namespace Application.Services
             return _mapper.Map<User>(userEntity);
         }
 
+        public async Task<string> GenerateRefreshTokenAsync(User user)
+        {
+            _userRepository.DetachLocal(user.Id);
+
+            var userEntity = await _userRepository.GetUserByIdAsync(user.Id);
+            if (userEntity == null)
+            {
+                throw new Exception("User not found.");
+            }
+
+            var refreshToken = Guid.NewGuid().ToString();
+            userEntity.RefreshToken = refreshToken;
+            userEntity.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+            await _userRepository.UpdateUserAsync(userEntity);
+            return refreshToken;
+        }
+
+
+
+        public async Task<User> GetUserByRefreshTokenAsync(string refreshToken)
+        {
+            var userEntity = await _userRepository.GetUserByRefreshTokenAsync(refreshToken);
+            return _mapper.Map<User>(userEntity);
+        }
+
         private string HashPassword(string password)
         {
             using var sha256 = SHA256.Create();
@@ -85,6 +111,6 @@ namespace Application.Services
         {
             var hashedPassword = HashPassword(password);
             return hashedPassword == passwordHash;
-        }
-    }
+        } 
+    }   
 }

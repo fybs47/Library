@@ -61,7 +61,18 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ReadPolicy", policy =>
+        policy.RequireRole("user", "admin"));
+    options.AddPolicy("WritePolicy", policy =>
+        policy.RequireRole("admin"));
+    options.AddPolicy("UpdatePolicy", policy =>
+        policy.RequireRole("admin"));
+    options.AddPolicy("DeletePolicy", policy =>
+        policy.RequireRole("admin"));
+});
+
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

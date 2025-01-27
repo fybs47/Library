@@ -14,6 +14,15 @@ namespace DataAccess.Repositories
             _context = context;
         }
 
+        public void DetachLocal(Guid entityId)
+        {
+            var local = _context.Set<UserEntity>().Local.FirstOrDefault(entry => entry.Id.Equals(entityId));
+            if (local != null)
+            {
+                _context.Entry(local).State = EntityState.Detached;
+            }
+        }
+
         public async Task<UserEntity> GetUserByIdAsync(Guid id)
         {
             return await _context.Users.FindAsync(id);
@@ -29,6 +38,11 @@ namespace DataAccess.Repositories
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
 
+        public async Task<UserEntity> GetUserByRefreshTokenAsync(string refreshToken)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken && u.RefreshTokenExpiryTime > DateTime.Now);
+        }
+
         public async Task AddUserAsync(UserEntity user)
         {
             _context.Users.Add(user);
@@ -37,8 +51,15 @@ namespace DataAccess.Repositories
 
         public async Task UpdateUserAsync(UserEntity user)
         {
-            _context.Entry(user).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Entry(user).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                throw new Exception("Concurrency conflict: The data has been modified or deleted since it was last loaded.", ex);
+            }
         }
 
         public async Task DeleteUserAsync(Guid id)
@@ -51,4 +72,5 @@ namespace DataAccess.Repositories
             }
         }
     }
+
 }
