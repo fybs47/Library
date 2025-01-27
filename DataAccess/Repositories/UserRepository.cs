@@ -1,5 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using DataAccess.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading.Tasks;
 
 namespace DataAccess.Repositories
 {
@@ -20,6 +22,11 @@ namespace DataAccess.Repositories
         public async Task<UserEntity> GetUserByUsernameAsync(string username)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        }
+
+        public async Task<UserEntity> GetUserByEmailAsync(string email)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
 
         public async Task AddUserAsync(UserEntity user)

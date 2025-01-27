@@ -29,7 +29,15 @@ namespace WebApi.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
             var user = _mapper.Map<User>(registerUserDto);
-            await _userService.RegisterUserAsync(user, registerUserDto.Password);
+
+            try
+            {
+                await _userService.RegisterUserAsync(user, registerUserDto.Password);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
 
             var tokenString = GenerateJwtToken(user);
 
@@ -49,7 +57,7 @@ namespace WebApi.Controllers
             var user = await _userService.AuthenticateUserAsync(loginDto.Username, loginDto.Password);
             if (user == null)
             {
-                return Unauthorized();
+                return Unauthorized(new { Message = "Invalid username or password" });
             }
 
             var tokenString = GenerateJwtToken(user);

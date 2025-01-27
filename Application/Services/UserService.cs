@@ -29,9 +29,25 @@ namespace Application.Services
             return _mapper.Map<User>(userEntity);
         }
 
+        public async Task<User> GetUserByEmailAsync(string email)
+        {
+            var userEntity = await _userRepository.GetUserByEmailAsync(email);
+            return _mapper.Map<User>(userEntity);
+        }
+
         public async Task RegisterUserAsync(User user, string password)
         {
-            user.PasswordHash = HashPassword(password); 
+            if (await _userRepository.GetUserByUsernameAsync(user.Username) != null)
+            {
+                throw new ArgumentException("User with this username already exists.");
+            }
+
+            if (await _userRepository.GetUserByEmailAsync(user.Email) != null)
+            {
+                throw new ArgumentException("User with this email already exists.");
+            }
+
+            user.PasswordHash = HashPassword(password);
             var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
             await _userRepository.AddUserAsync(userEntity);
         }
