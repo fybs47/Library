@@ -11,6 +11,7 @@ namespace Application.Abstractions
         Task UpdateBookAsync(Book book);
         Task DeleteBookAsync(Guid id);
         Task BorrowBookAsync(Guid id, DateTime borrowedTime, DateTime dueDate);
+        Task<Book> AddBookWithAuthorCheckAsync(Book book);
         Task AddBookImageAsync(Guid id, string imagePath);
     }
 }

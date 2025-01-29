@@ -11,6 +11,7 @@ namespace Application.Services
         Task DeleteUserAsync(Guid id);
         Task<User> AuthenticateUserAsync(string username, string password);
         Task<String> GenerateRefreshTokenAsync(User user);
+        
         Task<User> GetUserByRefreshTokenAsync(string refreshToken);
     }
 }

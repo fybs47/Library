@@ -11,7 +11,7 @@ namespace DataAccess.Models
         public DateTime BorrowedTime { get; set; } 
         public DateTime DueDate { get; set; }       
         public string ImagePath { get; set; } = string.Empty;
-
-        public AuthorEntity? Author { get; set; }              
+        public bool IsBorrowed { get; set; } 
+        public AuthorEntity? Author { get; set; }
     }
 }

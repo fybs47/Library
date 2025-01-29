@@ -2,6 +2,7 @@ using AutoMapper;
 using Application.Services;
 using Domain.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -17,27 +18,35 @@ namespace WebApi.Controllers
         private readonly IUserService _userService;
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IUserService userService, IMapper mapper, IConfiguration configuration)
+        public AuthController(IUserService userService, IMapper mapper, IConfiguration configuration, ILogger<AuthController> logger)
         {
             _userService = userService;
             _mapper = mapper;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
+            if (registerUserDto == null)
+            {
+                _logger.LogError("RegisterUserDto cannot be null.");
+                return BadRequest(new { Message = "Invalid request." });
+            }
+
             var user = _mapper.Map<User>(registerUserDto);
 
             try
             {
                 await _userService.RegisterUserAsync(user, registerUserDto.Password);
 
-                // Убедимся, что пользователь был успешно сохранен
                 var savedUser = await _userService.GetUserByUsernameAsync(user.Username);
                 if (savedUser == null)
                 {
+                    _logger.LogError("User registration failed.");
                     throw new Exception("User registration failed.");
                 }
 
@@ -63,77 +72,106 @@ namespace WebApi.Controllers
             }
             catch (ArgumentException ex)
             {
+                _logger.LogError(ex, "Error in Register");
                 return BadRequest(new { Message = ex.Message });
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in Register");
+                return StatusCode(500, new { Message = "Internal server error." });
+            }
         }
-
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var user = await _userService.AuthenticateUserAsync(loginDto.Username, loginDto.Password);
-
-            if (user == null)
+            if (loginDto == null)
             {
-                return Unauthorized(new { Message = "Invalid username or password" });
+                _logger.LogError("LoginDto cannot be null.");
+                return BadRequest(new { Message = "Invalid request." });
             }
 
-            var tokenString = GenerateJwtToken(user);
-            var refreshToken = await _userService.GenerateRefreshTokenAsync(user);
-
-            Response.Cookies.Append("access_token", tokenString, new CookieOptions
+            try
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None
-            });
+                var user = await _userService.AuthenticateUserAsync(loginDto.Username, loginDto.Password);
 
-            Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
+                if (user == null)
+                {
+                    _logger.LogWarning("Invalid username or password.");
+                    return Unauthorized(new { Message = "Invalid username or password" });
+                }
+
+                var tokenString = GenerateJwtToken(user);
+                var refreshToken = await _userService.GenerateRefreshTokenAsync(user);
+
+                Response.Cookies.Append("access_token", tokenString, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None
+                });
+
+                Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Expires = DateTime.UtcNow.AddDays(7)
+                });
+
+                return Ok(new { Token = tokenString, RefreshToken = refreshToken });
+            }
+            catch (Exception ex)
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddDays(7)
-            });
-
-            return Ok(new { Token = tokenString, RefreshToken = refreshToken });
+                _logger.LogError(ex, "Error in Login");
+                return StatusCode(500, new { Message = "Internal server error." });
+            }
         }
 
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh()
         {
-            // Получаем refresh токен из cookies
             var refreshToken = Request.Cookies["refresh_token"];
             if (string.IsNullOrEmpty(refreshToken))
             {
+                _logger.LogWarning("Refresh token is missing.");
                 return Unauthorized(new { Message = "Refresh token is missing" });
             }
 
-            var user = await _userService.GetUserByRefreshTokenAsync(refreshToken);
-            if (user == null)
+            try
             {
-                return Unauthorized(new { Message = "Invalid refresh token" });
+                var user = await _userService.GetUserByRefreshTokenAsync(refreshToken);
+                if (user == null)
+                {
+                    _logger.LogWarning("Invalid refresh token.");
+                    return Unauthorized(new { Message = "Invalid refresh token" });
+                }
+
+                var tokenString = GenerateJwtToken(user);
+                var newRefreshToken = await _userService.GenerateRefreshTokenAsync(user);
+
+                Response.Cookies.Append("access_token", tokenString, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None
+                });
+
+                Response.Cookies.Append("refresh_token", newRefreshToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Expires = DateTime.UtcNow.AddDays(7)
+                });
+
+                return Ok(new { Token = tokenString, RefreshToken = newRefreshToken });
             }
-
-            var tokenString = GenerateJwtToken(user);
-            var newRefreshToken = await _userService.GenerateRefreshTokenAsync(user);
-
-            Response.Cookies.Append("access_token", tokenString, new CookieOptions
+            catch (Exception ex)
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None
-            });
-
-            Response.Cookies.Append("refresh_token", newRefreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddDays(7)
-            });
-
-            return Ok(new { Token = tokenString, RefreshToken = newRefreshToken });
+                _logger.LogError(ex, "Error in Refresh");
+                return StatusCode(500, new { Message = "Internal server error." });
+            }
         }
 
         private string GenerateJwtToken(User user)
