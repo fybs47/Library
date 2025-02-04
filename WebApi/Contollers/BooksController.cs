@@ -104,15 +104,17 @@ namespace WebApi.Controllers
 
         [HttpPost("{id}/addImage")]
         [Authorize(Policy = "WritePolicy")]
-        public async Task<IActionResult> AddBookImage(Guid id, [FromBody] AddBookImageDto addBookImageDto)
+        public async Task<IActionResult> AddBookImage(Guid id, IFormFile file)
         {
-            if (id != addBookImageDto.BookId)
+            if (file == null || file.Length == 0)
             {
-                return BadRequest();
+                return BadRequest("Файл не загружен.");
             }
 
-            await _bookService.AddBookImageAsync(id, addBookImageDto.ImagePath);
-            return NoContent();
+            var imagePath = await _bookService.SaveBookImageAsync(id, file);
+            return Ok(new { imagePath });
         }
+
     }
 }
+

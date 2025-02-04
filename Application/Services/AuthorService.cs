@@ -46,10 +46,25 @@ namespace Application.Services
             await _authorRepository.DeleteAuthorAsync(id);
         }
 
+        private string FormImageUrl(string imagePath)
+        {
+            return $"http://localhost:5080/images/{Path.GetFileName(imagePath)}";
+        }
+
         public async Task<IEnumerable<Book>> GetBooksByAuthorAsync(Guid authorId)
         {
             var books = await _authorRepository.GetBooksByAuthorAsync(authorId);
-            return _mapper.Map<IEnumerable<Book>>(books);
+            var bookModels = _mapper.Map<IEnumerable<Book>>(books);
+
+            foreach (var book in bookModels)
+            {
+                if (!string.IsNullOrEmpty(book.ImagePath))
+                {
+                    book.ImagePath = FormImageUrl(book.ImagePath);
+                }
+            }
+
+            return bookModels;
         }
     }
 }

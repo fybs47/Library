@@ -8,6 +8,7 @@ using Application.Services;
 using WebApi.MappingProfiles;
 using System.Text;
 using Application.Abstractions;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,6 +74,17 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("admin"));
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -120,6 +132,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication(); 
 app.UseAuthorization();  
+app.UseStaticFiles();
+
+app.UseCors("AllowSpecificOrigin");
 
 app.UseMiddleware<JwtValidationMiddleware>();
 

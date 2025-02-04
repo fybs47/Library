@@ -34,7 +34,6 @@ namespace WebApi.Controllers
             {
                 await _userService.RegisterUserAsync(user, registerUserDto.Password);
 
-                // Убедимся, что пользователь был успешно сохранен
                 var savedUser = await _userService.GetUserByUsernameAsync(user.Username);
                 if (savedUser == null)
                 {
@@ -46,14 +45,14 @@ namespace WebApi.Controllers
 
                 Response.Cookies.Append("access_token", tokenString, new CookieOptions
                 {
-                    HttpOnly = true,
+                    HttpOnly = false,
                     Secure = true,
                     SameSite = SameSiteMode.None
                 });
 
                 Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
                 {
-                    HttpOnly = true,
+                    HttpOnly = false,
                     Secure = true,
                     SameSite = SameSiteMode.None,
                     Expires = DateTime.UtcNow.AddDays(7)
@@ -83,14 +82,14 @@ namespace WebApi.Controllers
 
             Response.Cookies.Append("access_token", tokenString, new CookieOptions
             {
-                HttpOnly = true,
+                HttpOnly = false,
                 Secure = true,
                 SameSite = SameSiteMode.None
             });
 
             Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
             {
-                HttpOnly = true,
+                HttpOnly = false,
                 Secure = true,
                 SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddDays(7)
@@ -102,7 +101,6 @@ namespace WebApi.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh()
         {
-            // Получаем refresh токен из cookies
             var refreshToken = Request.Cookies["refresh_token"];
             if (string.IsNullOrEmpty(refreshToken))
             {
@@ -120,14 +118,14 @@ namespace WebApi.Controllers
 
             Response.Cookies.Append("access_token", tokenString, new CookieOptions
             {
-                HttpOnly = true,
+                HttpOnly = false,
                 Secure = true,
                 SameSite = SameSiteMode.None
             });
 
             Response.Cookies.Append("refresh_token", newRefreshToken, new CookieOptions
             {
-                HttpOnly = true,
+                HttpOnly = false,
                 Secure = true,
                 SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddDays(7)
