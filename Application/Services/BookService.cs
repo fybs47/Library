@@ -1,8 +1,9 @@
 using Application.Abstractions;
 using AutoMapper;
+using DataAccess.Models;
 using DataAccess.Repositories;
 using Domain.Models;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 
 namespace Application.Services
 {
@@ -11,7 +12,7 @@ namespace Application.Services
         private readonly IBookRepository _bookRepository;
         private readonly IAuthorRepository _authorRepository;
         private readonly IMapper _mapper;
-        private readonly ILogger<BookService> _logger;
+        private readonly string _imagesFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
 
         public BookService(IBookRepository bookRepository, IAuthorRepository authorRepository, IMapper mapper, ILogger<BookService> logger)
         {
@@ -21,18 +22,61 @@ namespace Application.Services
             _logger = logger;
         }
 
+        private string FormImageUrl(string imagePath)
+        {
+            return $"http://localhost:5080/images/{Path.GetFileName(imagePath)}";
+        }
+
+        public async Task<string> SaveBookImageAsync(Guid id, IFormFile file)
+        {
+            if (!Directory.Exists(_imagesFolderPath))
+            {
+                Directory.CreateDirectory(_imagesFolderPath);
+            }
+
+            var fileName = $"{id}_{file.FileName}";
+            var filePath = Path.Combine(_imagesFolderPath, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var imagePath = $"/images/{fileName}";
+            await _bookRepository.AddBookImageAsync(id, imagePath);
+            return FormImageUrl(imagePath);
+        }
+
         public async Task<IEnumerable<Book>> GetAllBooksAsync()
         {
-            try
+            var books = await _bookRepository.GetAllBooksAsync();
+            var bookModels = _mapper.Map<IEnumerable<Book>>(books);
+
+            foreach (var book in bookModels)
             {
-                var books = await _bookRepository.GetAllBooksAsync();
-                return _mapper.Map<IEnumerable<Book>>(books);
+                if (!string.IsNullOrEmpty(book.ImagePath))
+                {
+                    book.ImagePath = FormImageUrl(book.ImagePath);
+                }
             }
-            catch (Exception ex)
+
+            return bookModels;
+        }
+
+        public async Task<(IEnumerable<Book>, int)> GetBooksAsync(int pageNumber, int pageSize)
+        {
+            var (books, totalCount) = await _bookRepository.GetBooksAsync(pageNumber, pageSize);
+            var bookModels = _mapper.Map<IEnumerable<Book>>(books);
+
+            foreach (var book in bookModels)
             {
-                _logger.LogError(ex, "Error in GetAllBooksAsync");
-                throw;
+                if (!string.IsNullOrEmpty(book.ImagePath))
+                {
+                    book.ImagePath = FormImageUrl(book.ImagePath);
+                }
             }
+
+            return (bookModels, totalCount);
         }
 
         public async Task<Book> GetBookByIdAsync(Guid id)
@@ -79,41 +123,26 @@ namespace Application.Services
         {
             if (book == null)
             {
-                _logger.LogError("Book cannot be null.");
                 throw new ArgumentNullException(nameof(book));
             }
 
-            try
-            {
-                var bookEntity = _mapper.Map<DataAccess.Models.BookEntity>(book);
-                await _bookRepository.AddBookAsync(bookEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in AddBookAsync");
-                throw;
-            }
+            var bookEntity = _mapper.Map<BookEntity>(book);
+            await _bookRepository.AddBookAsync(bookEntity);
+
+            book.Id = bookEntity.Id;
         }
 
         public async Task UpdateBookAsync(Book book)
         {
             if (book == null)
             {
-                _logger.LogError("Book cannot be null.");
                 throw new ArgumentNullException(nameof(book));
             }
 
-            try
-            {
-                var bookEntity = _mapper.Map<DataAccess.Models.BookEntity>(book);
-                await _bookRepository.UpdateBookAsync(bookEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in UpdateBookAsync");
-                throw;
-            }
+            var bookEntity = _mapper.Map<BookEntity>(book);
+            await _bookRepository.UpdateBookAsync(bookEntity);
         }
+
 
         public async Task DeleteBookAsync(Guid id)
         {

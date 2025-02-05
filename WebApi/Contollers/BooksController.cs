@@ -1,8 +1,10 @@
-using Application.Abstractions;
+    using Application.Abstractions;
+using Application.Services;
 using AutoMapper;
 using Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using WebApi.Contracts;
 
 namespace WebApi.Controllers
@@ -13,14 +15,15 @@ namespace WebApi.Controllers
     public class BooksController : ControllerBase
     {
         private readonly IBookService _bookService;
+        private readonly IAuthorService _authorService;
         private readonly IMapper _mapper;
         private readonly ILogger<BooksController> _logger;
 
-        public BooksController(IBookService bookService, IMapper mapper, ILogger<BooksController> logger)
+        public BooksController(IBookService bookService, IAuthorService authorService, IMapper mapper )
         {
             _bookService = bookService;
             _mapper = mapper;
-            _logger = logger;
+            _authorService = authorService;
         }
 
         [HttpGet]
@@ -45,6 +48,15 @@ namespace WebApi.Controllers
                 _logger.LogError(ex, "Error in GetAllBooks");
                 return StatusCode(500, new { Message = "Internal server error." });
             }
+        }
+
+        [HttpGet("paged")]
+        [Authorize(Policy = "ReadPolicy")]
+        public async Task<IActionResult> GetBooks(int pageNumber, int pageSize)
+        {
+            var (books, totalCount) = await _bookService.GetBooksAsync(pageNumber, pageSize);
+            var booksDto = _mapper.Map<IEnumerable<BookDto>>(books);
+            return Ok(new { books = booksDto, totalCount });
         }
 
         [HttpGet("{id}")]
@@ -115,31 +127,33 @@ namespace WebApi.Controllers
         {
             if (createBookDto == null)
             {
-                _logger.LogError("CreateBookDto cannot be null.");
-                return BadRequest(new { Message = "Invalid request." });
+                return BadRequest("Некорректные данные.");
             }
 
-            try
-            {
-                var book = _mapper.Map<Book>(createBookDto);
-                var createdBook = await _bookService.AddBookWithAuthorCheckAsync(book);
-                var bookDto = _mapper.Map<BookDto>(createdBook);
+            var book = _mapper.Map<Book>(createBookDto);
 
-                var baseImageUrl = $"{Request.Scheme}://{Request.Host}/images/";
-                bookDto.ImageUrl = $"{baseImageUrl}{Path.GetFileName(createdBook.ImagePath)}";
+            if (book == null)
+            {
+                return BadRequest("Ошибка маппинга данных.");
+            }
 
-                return CreatedAtAction(nameof(GetBookById), new { id = createdBook.Id }, bookDto);
-            }
-            catch (ArgumentException ex)
+            var authorExists = await _authorService.GetAuthorByIdAsync(createBookDto.AuthorId);
+            if (authorExists == null)
             {
-                _logger.LogError(ex, "Error in AddBook");
-                return BadRequest(new { Message = ex.Message });
+                return BadRequest("Указанный автор не существует.");
             }
-            catch (Exception ex)
+
+            book.AuthorId = createBookDto.AuthorId;
+
+            await _bookService.AddBookAsync(book);
+
+            if (book.Id == Guid.Empty)
             {
-                _logger.LogError(ex, "Error in AddBook");
-                return StatusCode(500, new { Message = "Internal server error." });
+                return BadRequest("Ошибка сохранения книги.");
             }
+
+            var bookDto = _mapper.Map<BookDto>(book);
+            return CreatedAtAction(nameof(GetBookById), new { id = book.Id }, bookDto);
         }
 
         [HttpPut("{id}")]
@@ -148,22 +162,51 @@ namespace WebApi.Controllers
         {
             if (id == Guid.Empty || updateBookDto == null)
             {
-                _logger.LogError("Invalid book ID or UpdateBookDto.");
-                return BadRequest(new { Message = "Invalid request." });
+                return BadRequest("Некорректные данные.");
             }
+
+            var book = await _bookService.GetBookByIdAsync(id);
+            if (book == null)
+            {
+                return NotFound("Книга не найдена.");
+            }
+
+            var author = await _authorService.GetAuthorByIdAsync(updateBookDto.AuthorId);
+            if (author == null)
+            {
+                return BadRequest("Указанный автор не существует.");
+            }
+
+            _mapper.Map(updateBookDto, book);
+
+                    book.AuthorId = updateBookDto.AuthorId;
 
             try
             {
-                var book = _mapper.Map<Book>(updateBookDto);
                 await _bookService.UpdateBookAsync(book);
-                return NoContent();
             }
-            catch (Exception ex)
+            catch (DbUpdateConcurrencyException)
             {
-                _logger.LogError(ex, "Error in UpdateBook");
-                return StatusCode(500, new { Message = "Internal server error." });
+                if (!await BookExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
             }
+
+            return Ok(book); 
         }
+
+        private async Task<bool> BookExists(Guid id)
+        {
+            var book = await _bookService.GetBookByIdAsync(id);
+            return book != null;
+        }
+
+
 
         [HttpDelete("{id}")]
         [Authorize(Policy = "DeletePolicy")]
@@ -214,41 +257,15 @@ namespace WebApi.Controllers
 
         [HttpPost("{id}/addImage")]
         [Authorize(Policy = "WritePolicy")]
-        public async Task<IActionResult> AddBookImage(Guid id, [FromForm] AddBookImageDto addBookImageDto)
+        public async Task<IActionResult> AddBookImage(Guid id, IFormFile file)
         {
-            if (id == Guid.Empty || addBookImageDto == null || addBookImageDto.Image == null)
+            if (file == null || file.Length == 0)
             {
-                _logger.LogError("Invalid book ID or AddBookImageDto.");
-                return BadRequest(new { Message = "Invalid request." });
+                return BadRequest("Файл не загружен.");
             }
 
-            try
-            {
-                var imagesPath = Path.Combine(Directory.GetCurrentDirectory(), "Images");
-
-                if (!Directory.Exists(imagesPath))
-                {
-                    Directory.CreateDirectory(imagesPath);
-                }
-
-                var imagePath = Path.Combine(imagesPath, $"{id}_{addBookImageDto.Image.FileName}");
-                using (var stream = new FileStream(imagePath, FileMode.Create))
-                {
-                    await addBookImageDto.Image.CopyToAsync(stream);
-                }
-
-                await _bookService.AddBookImageAsync(id, imagePath);
-
-                var baseImageUrl = $"{Request.Scheme}://{Request.Host}/images/";
-                var imageUrl = $"{baseImageUrl}{Path.GetFileName(imagePath)}";
-
-                return Ok(new { imageUrl });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in AddBookImage");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+            var imagePath = await _bookService.SaveBookImageAsync(id, file);
+            return Ok(new { imagePath });
         }
     }
 }

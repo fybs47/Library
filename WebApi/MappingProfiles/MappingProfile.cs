@@ -10,17 +10,24 @@ namespace WebApi.MappingProfiles
         public MappingProfile()
         {
             CreateMap<Book, BookDto>().ReverseMap();
-            CreateMap<CreateBookDto, Book>();
-            CreateMap<UpdateBookDto, Book>();
-            CreateMap<BorrowBookDto, Book>();
-            CreateMap<AddBookImageDto, Book>();
+            CreateMap<CreateBookDto, Book>()
+                .ForMember(dest => dest.Author, opt => opt.Ignore()); // Игнорируем навигационное свойство
+
+            CreateMap<UpdateBookDto, Book>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())  // Игнорируем Id
+                .ForMember(dest => dest.Author, opt => opt.Ignore());  // Игнорируем сущность автора, но НЕ AuthorId
+
+            CreateMap<BorrowBookDto, Book>().ForMember(dest => dest.Author, opt => opt.Ignore()); // Игнорируем навигационное свойство при заимствовании
+            CreateMap<AddBookImageDto, Book>().ForMember(dest => dest.Author, opt => opt.Ignore()); // Игнорируем навигационное свойство при добавлении изображения
+
+            CreateMap<Book, BookEntity>().ReverseMap()
+                .ForMember(dest => dest.Author, opt => opt.Ignore()); // Игнорируем навигационное свойство
 
             CreateMap<Author, AuthorDto>().ReverseMap();
             CreateMap<CreateAuthorDto, Author>();
             CreateMap<UpdateAuthorDto, Author>();
 
             CreateMap<Author, AuthorEntity>().ReverseMap();
-            CreateMap<Book, BookEntity>().ReverseMap();
 
             CreateMap<User, UserEntity>().ReverseMap();
             CreateMap<RegisterUserDto, User>();

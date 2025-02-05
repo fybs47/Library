@@ -1,6 +1,6 @@
+using DataAccess.Configurations;
 using Microsoft.EntityFrameworkCore;
 using DataAccess.Models;
-using DataAccess.Configurations;
 
 namespace DataAccess
 {
@@ -17,6 +17,11 @@ namespace DataAccess
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<AuthorEntity>()
+                .Property(a => a.Id)
+                .ValueGeneratedOnAdd()
+                .HasDefaultValueSql("uuid_generate_v4()"); 
 
             modelBuilder.ApplyConfiguration(new BookEntityConfiguration());
             modelBuilder.ApplyConfiguration(new AuthorEntityConfiguration());

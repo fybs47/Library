@@ -2,5 +2,5 @@ namespace WebApi.Contracts;
 
 public class AddBookImageDto
 {
-    public IFormFile Image { get; set; }
+    public string ImagePath { get; set; } = string.Empty;
 }

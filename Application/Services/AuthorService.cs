@@ -54,23 +54,9 @@ namespace Application.Services
 
         public async Task<Author> AddAuthorAsync(Author author)
         {
-            if (author == null)
-            {
-                _logger.LogError("Author cannot be null.");
-                throw new ArgumentNullException(nameof(author));
-            }
-
-            try
-            {
-                var authorEntity = _mapper.Map<DataAccess.Models.AuthorEntity>(author);
-                await _authorRepository.AddAuthorAsync(authorEntity);
-                return _mapper.Map<Author>(authorEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in AddAuthorAsync");
-                throw;
-            }
+            var authorEntity = _mapper.Map<DataAccess.Models.AuthorEntity>(author);
+            await _authorRepository.AddAuthorAsync(authorEntity);
+            author.Id = authorEntity.Id;
         }
 
         public async Task UpdateAuthorAsync(Author author)
@@ -112,24 +98,25 @@ namespace Application.Services
             }
         }
 
+        private string FormImageUrl(string imagePath)
+        {
+            return $"http://localhost:5080/images/{Path.GetFileName(imagePath)}";
+        }
+
         public async Task<IEnumerable<Book>> GetBooksByAuthorAsync(Guid authorId)
         {
-            if (authorId == Guid.Empty)
+            var books = await _authorRepository.GetBooksByAuthorAsync(authorId);
+            var bookModels = _mapper.Map<IEnumerable<Book>>(books);
+
+            foreach (var book in bookModels)
             {
-                _logger.LogError("Invalid author ID.");
-                throw new ArgumentException("Invalid author ID.");
+                if (!string.IsNullOrEmpty(book.ImagePath))
+                {
+                    book.ImagePath = FormImageUrl(book.ImagePath);
+                }
             }
 
-            try
-            {
-                var books = await _authorRepository.GetBooksByAuthorAsync(authorId);
-                return _mapper.Map<IEnumerable<Book>>(books);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetBooksByAuthorAsync");
-                throw;
-            }
+            return bookModels;
         }
     }
 }

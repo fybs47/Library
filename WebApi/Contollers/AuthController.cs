@@ -55,14 +55,14 @@ namespace WebApi.Controllers
 
                 Response.Cookies.Append("access_token", tokenString, new CookieOptions
                 {
-                    HttpOnly = true,
+                    HttpOnly = false,
                     Secure = true,
                     SameSite = SameSiteMode.None
                 });
 
                 Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
                 {
-                    HttpOnly = true,
+                    HttpOnly = false,
                     Secure = true,
                     SameSite = SameSiteMode.None,
                     Expires = DateTime.UtcNow.AddDays(7)
@@ -93,7 +93,10 @@ namespace WebApi.Controllers
 
             try
             {
-                var user = await _userService.AuthenticateUserAsync(loginDto.Username, loginDto.Password);
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None
+            });
 
                 if (user == null)
                 {
@@ -123,9 +126,13 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Login");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddDays(7)
+            });
+
+            return Ok(new { Token = tokenString, RefreshToken = refreshToken });
         }
 
         [HttpPost("refresh")]
@@ -169,9 +176,20 @@ namespace WebApi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Refresh");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None
+            });
+
+            Response.Cookies.Append("refresh_token", newRefreshToken, new CookieOptions
+            {
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddDays(7)
+            });
+
+            return Ok(new { Token = tokenString, RefreshToken = newRefreshToken });
         }
 
         private string GenerateJwtToken(User user)
