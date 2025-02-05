@@ -10,16 +10,13 @@ namespace Application.Services
     public class BookService : IBookService
     {
         private readonly IBookRepository _bookRepository;
-        private readonly IAuthorRepository _authorRepository;
         private readonly IMapper _mapper;
         private readonly string _imagesFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
 
-        public BookService(IBookRepository bookRepository, IAuthorRepository authorRepository, IMapper mapper, ILogger<BookService> logger)
+        public BookService(IBookRepository bookRepository, IMapper mapper)
         {
             _bookRepository = bookRepository;
-            _authorRepository = authorRepository;
             _mapper = mapper;
-            _logger = logger;
         }
 
         private string FormImageUrl(string imagePath)
@@ -81,42 +78,21 @@ namespace Application.Services
 
         public async Task<Book> GetBookByIdAsync(Guid id)
         {
-            if (id == Guid.Empty)
+            var book = await _bookRepository.GetBookByIdAsync(id);
+            var bookModel = _mapper.Map<Book>(book);
+
+            if (!string.IsNullOrEmpty(bookModel.ImagePath))
             {
-                _logger.LogError("Invalid book ID.");
-                throw new ArgumentException("Invalid book ID.");
+                bookModel.ImagePath = FormImageUrl(bookModel.ImagePath);
             }
 
-            try
-            {
-                var book = await _bookRepository.GetBookByIdAsync(id);
-                return _mapper.Map<Book>(book);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetBookByIdAsync");
-                throw;
-            }
+            return bookModel;
         }
 
         public async Task<Book> GetBookByISBNAsync(string isbn)
         {
-            if (string.IsNullOrWhiteSpace(isbn))
-            {
-                _logger.LogError("ISBN cannot be null or empty.");
-                throw new ArgumentException("ISBN cannot be null or empty.");
-            }
-
-            try
-            {
-                var book = await _bookRepository.GetBookByISBNAsync(isbn);
-                return _mapper.Map<Book>(book);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetBookByISBNAsync");
-                throw;
-            }
+            var book = await _bookRepository.GetBookByISBNAsync(isbn);
+            return _mapper.Map<Book>(book);
         }
 
         public async Task AddBookAsync(Book book)
@@ -146,109 +122,17 @@ namespace Application.Services
 
         public async Task DeleteBookAsync(Guid id)
         {
-            if (id == Guid.Empty)
-            {
-                _logger.LogError("Invalid book ID.");
-                throw new ArgumentException("Invalid book ID.");
-            }
-
-            try
-            {
-                await _bookRepository.DeleteBookAsync(id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in DeleteBookAsync");
-                throw;
-            }
+            await _bookRepository.DeleteBookAsync(id);
         }
 
         public async Task BorrowBookAsync(Guid id, DateTime borrowedTime, DateTime dueDate)
         {
-            if (id == Guid.Empty)
-            {
-                _logger.LogError("Invalid book ID.");
-                throw new ArgumentException("Invalid book ID.");
-            }
-
-            if (borrowedTime == default || dueDate == default || borrowedTime >= dueDate)
-            {
-                _logger.LogError("Invalid borrowed time or due date.");
-                throw new ArgumentException("Invalid borrowed time or due date.");
-            }
-
-            _logger.LogInformation($"Service: BorrowBookAsync called with borrowedTime={borrowedTime}, dueDate={dueDate}");
-            try
-            {
-                await _bookRepository.BorrowBookAsync(id, borrowedTime, dueDate);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in BorrowBookAsync");
-                throw;
-            }
+            await _bookRepository.BorrowBookAsync(id, borrowedTime, dueDate);
         }
 
-        
-        public async Task<Book> AddBookWithAuthorCheckAsync(Book book)
-        {
-            if (book == null)
-            {
-                _logger.LogError("Book cannot be null.");
-                throw new ArgumentNullException(nameof(book));
-            }
-
-            if (book.AuthorId == Guid.Empty)
-            {
-                _logger.LogError("Invalid author ID.");
-                throw new ArgumentException("Invalid author ID.");
-            }
-
-            // Проверяем, существует ли автор
-            var author = await _authorRepository.GetAuthorByIdAsync(book.AuthorId);
-            if (author == null)
-            {
-                _logger.LogError("Author not found.");
-                throw new ArgumentException("Author not found.");
-            }
-
-            try
-            {
-                var bookEntity = _mapper.Map<DataAccess.Models.BookEntity>(book);
-                await _bookRepository.AddBookAsync(bookEntity);
-                return _mapper.Map<Book>(bookEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in AddBookWithAuthorCheckAsync");
-                throw;
-            }
-        }
-
-        
         public async Task AddBookImageAsync(Guid id, string imagePath)
         {
-            if (id == Guid.Empty)
-            {
-                _logger.LogError("Invalid book ID.");
-                throw new ArgumentException("Invalid book ID.");
-            }
-
-            if (string.IsNullOrWhiteSpace(imagePath))
-            {
-                _logger.LogError("Image path cannot be null or empty.");
-                throw new ArgumentException("Image path cannot be null or empty.");
-            }
-
-            try
-            {
-                await _bookRepository.AddBookImageAsync(id, imagePath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in AddBookImageAsync");
-                throw;
-            }
+            await _bookRepository.AddBookImageAsync(id, imagePath);
         }
     }
 }

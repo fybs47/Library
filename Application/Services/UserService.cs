@@ -1,7 +1,6 @@
 using AutoMapper;
 using DataAccess.Repositories;
 using Domain.Models;
-using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,230 +10,92 @@ namespace Application.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
-        private readonly ILogger<UserService> _logger;
 
-        public UserService(IUserRepository userRepository, IMapper mapper, ILogger<UserService> logger)
+        public UserService(IUserRepository userRepository, IMapper mapper)
         {
             _userRepository = userRepository;
             _mapper = mapper;
-            _logger = logger;
         }
 
         public async Task<User> GetUserByIdAsync(Guid id)
         {
-            if (id == Guid.Empty)
-            {
-                _logger.LogError("Invalid user ID.");
-                throw new ArgumentException("Invalid user ID.");
-            }
-
-            try
-            {
-                var userEntity = await _userRepository.GetUserByIdAsync(id);
-                return _mapper.Map<User>(userEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetUserByIdAsync");
-                throw;
-            }
+            var userEntity = await _userRepository.GetUserByIdAsync(id);
+            return _mapper.Map<User>(userEntity);
         }
 
         public async Task<User> GetUserByUsernameAsync(string username)
         {
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                _logger.LogError("Username cannot be null or empty.");
-                throw new ArgumentException("Username cannot be null or empty.");
-            }
-
-            try
-            {
-                var userEntity = await _userRepository.GetUserByUsernameAsync(username);
-                return _mapper.Map<User>(userEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetUserByUsernameAsync");
-                throw;
-            }
+            var userEntity = await _userRepository.GetUserByUsernameAsync(username);
+            return _mapper.Map<User>(userEntity);
         }
 
         public async Task<User> GetUserByEmailAsync(string email)
         {
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                _logger.LogError("Email cannot be null or empty.");
-                throw new ArgumentException("Email cannot be null or empty.");
-            }
-
-            try
-            {
-                var userEntity = await _userRepository.GetUserByEmailAsync(email);
-                return _mapper.Map<User>(userEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetUserByEmailAsync");
-                throw;
-            }
+            var userEntity = await _userRepository.GetUserByEmailAsync(email);
+            return _mapper.Map<User>(userEntity);
         }
 
         public async Task RegisterUserAsync(User user, string password)
         {
-            if (user == null)
+            if (await _userRepository.GetUserByUsernameAsync(user.Username) != null)
             {
-                _logger.LogError("User cannot be null.");
-                throw new ArgumentNullException(nameof(user));
+                throw new ArgumentException("User with this username already exists.");
             }
 
-            if (string.IsNullOrWhiteSpace(password))
+            if (await _userRepository.GetUserByEmailAsync(user.Email) != null)
             {
-                _logger.LogError("Password cannot be null or empty.");
-                throw new ArgumentException("Password cannot be null or empty.");
+                throw new ArgumentException("User with this email already exists.");
             }
 
-            try
-            {
-                if (await _userRepository.GetUserByUsernameAsync(user.Username) != null)
-                {
-                    _logger.LogError("User with this username already exists.");
-                    throw new ArgumentException("User with this username already exists.");
-                }
-
-                if (await _userRepository.GetUserByEmailAsync(user.Email) != null)
-                {
-                    _logger.LogError("User with this email already exists.");
-                    throw new ArgumentException("User with this email already exists.");
-                }
-
-                user.PasswordHash = HashPassword(password);
-                var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
-                await _userRepository.AddUserAsync(userEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in RegisterUserAsync");
-                throw;
-            }
+            user.PasswordHash = HashPassword(password);
+            var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
+            await _userRepository.AddUserAsync(userEntity);
         }
 
         public async Task UpdateUserAsync(User user)
         {
-            if (user == null)
-            {
-                _logger.LogError("User cannot be null.");
-                throw new ArgumentNullException(nameof(user));
-            }
-
-            try
-            {
-                var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
-                await _userRepository.UpdateUserAsync(userEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in UpdateUserAsync");
-                throw;
-            }
+            var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
+            await _userRepository.UpdateUserAsync(userEntity);
         }
 
         public async Task DeleteUserAsync(Guid id)
         {
-            if (id == Guid.Empty)
-            {
-                _logger.LogError("Invalid user ID.");
-                throw new ArgumentException("Invalid user ID.");
-            }
-
-            try
-            {
-                await _userRepository.DeleteUserAsync(id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in DeleteUserAsync");
-                throw;
-            }
+            await _userRepository.DeleteUserAsync(id);
         }
 
         public async Task<User> AuthenticateUserAsync(string username, string password)
         {
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            var userEntity = await _userRepository.GetUserByUsernameAsync(username);
+            if (userEntity == null || !VerifyPassword(password, userEntity.PasswordHash))
             {
-                _logger.LogError("Username and password cannot be null or empty.");
-                throw new ArgumentException("Username and password cannot be null or empty.");
+                return null;
             }
 
-            try
-            {
-                var userEntity = await _userRepository.GetUserByUsernameAsync(username);
-                if (userEntity == null || !VerifyPassword(password, userEntity.PasswordHash))
-                {
-                    _logger.LogError("Invalid username or password.");
-                    return null;
-                }
-
-                return _mapper.Map<User>(userEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in AuthenticateUserAsync");
-                throw;
-            }
+            return _mapper.Map<User>(userEntity);
         }
 
         public async Task<string> GenerateRefreshTokenAsync(User user)
         {
-            if (user == null)
+            _userRepository.DetachLocal(user.Id);
+
+            var userEntity = await _userRepository.GetUserByIdAsync(user.Id);
+            if (userEntity == null)
             {
-                _logger.LogError("User cannot be null.");
-                throw new ArgumentNullException(nameof(user));
+                throw new Exception("User not found.");
             }
 
-            try
-            {
-                _userRepository.DetachLocal(user.Id);
+            var refreshToken = Guid.NewGuid().ToString();
+            userEntity.RefreshToken = refreshToken;
+            userEntity.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
 
-                var userEntity = await _userRepository.GetUserByIdAsync(user.Id);
-                if (userEntity == null)
-                {
-                    _logger.LogError("User not found.");
-                    throw new Exception("User not found.");
-                }
-
-                var refreshToken = Guid.NewGuid().ToString();
-                userEntity.RefreshToken = refreshToken;
-                userEntity.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-
-                await _userRepository.UpdateUserAsync(userEntity);
-                return refreshToken;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GenerateRefreshTokenAsync");
-                throw;
-            }
+            await _userRepository.UpdateUserAsync(userEntity);
+            return refreshToken;
         }
 
         public async Task<User> GetUserByRefreshTokenAsync(string refreshToken)
         {
-            if (string.IsNullOrWhiteSpace(refreshToken))
-            {
-                _logger.LogError("Refresh token cannot be null or empty.");
-                throw new ArgumentException("Refresh token cannot be null or empty.");
-            }
-
-            try
-            {
-                var userEntity = await _userRepository.GetUserByRefreshTokenAsync(refreshToken);
-                return _mapper.Map<User>(userEntity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetUserByRefreshTokenAsync");
-                throw;
-            }
+            var userEntity = await _userRepository.GetUserByRefreshTokenAsync(refreshToken);
+            return _mapper.Map<User>(userEntity);
         }
 
         private string HashPassword(string password)
@@ -248,6 +109,6 @@ namespace Application.Services
         {
             var hashedPassword = HashPassword(password);
             return hashedPassword == passwordHash;
-        }
-    }
+        } 
+    }   
 }

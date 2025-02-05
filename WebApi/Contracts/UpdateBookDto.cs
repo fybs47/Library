@@ -9,6 +9,6 @@ public class UpdateBookDto
     public Guid AuthorId { get; set; }
     public DateTime BorrowedTime { get; set; }
     public DateTime DueDate { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
+    public string ImagePath { get; set; } = string.Empty;
     public bool IsBorrowed { get; set; }
 }

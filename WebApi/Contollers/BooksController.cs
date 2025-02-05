@@ -1,4 +1,4 @@
-    using Application.Abstractions;
+using Application.Abstractions;
 using Application.Services;
 using AutoMapper;
 using Domain.Models;
@@ -17,7 +17,6 @@ namespace WebApi.Controllers
         private readonly IBookService _bookService;
         private readonly IAuthorService _authorService;
         private readonly IMapper _mapper;
-        private readonly ILogger<BooksController> _logger;
 
         public BooksController(IBookService bookService, IAuthorService authorService, IMapper mapper )
         {
@@ -30,24 +29,9 @@ namespace WebApi.Controllers
         [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetAllBooks()
         {
-            try
-            {
-                var books = await _bookService.GetAllBooksAsync();
-                var booksDto = _mapper.Map<IEnumerable<BookDto>>(books);
-
-                foreach (var bookDto in booksDto)
-                {
-                    var baseImageUrl = $"{Request.Scheme}://{Request.Host}/images/";
-                    bookDto.ImageUrl = $"{baseImageUrl}{Path.GetFileName(bookDto.ImageUrl)}";
-                }
-
-                return Ok(booksDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetAllBooks");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+            var books = await _bookService.GetAllBooksAsync();
+            var booksDto = _mapper.Map<IEnumerable<BookDto>>(books);
+            return Ok(booksDto);
         }
 
         [HttpGet("paged")]
@@ -63,62 +47,26 @@ namespace WebApi.Controllers
         [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetBookById(Guid id)
         {
-            if (id == Guid.Empty)
+            var book = await _bookService.GetBookByIdAsync(id);
+            if (book == null)
             {
-                _logger.LogError("Invalid book ID.");
-                return BadRequest(new { Message = "Invalid book ID." });
+                return NotFound();
             }
-
-            try
-            {
-                var book = await _bookService.GetBookByIdAsync(id);
-                if (book == null)
-                {
-                    return NotFound();
-                }
-                var bookDto = _mapper.Map<BookDto>(book);
-
-                var baseImageUrl = $"{Request.Scheme}://{Request.Host}/images/";
-                bookDto.ImageUrl = $"{baseImageUrl}{Path.GetFileName(book.ImagePath)}";
-
-                return Ok(bookDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetBookById");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+            var bookDto = _mapper.Map<BookDto>(book);
+            return Ok(bookDto);
         }
 
         [HttpGet("isbn/{isbn}")]
         [Authorize(Policy = "ReadPolicy")]
         public async Task<IActionResult> GetBookByISBN(string isbn)
         {
-            if (string.IsNullOrWhiteSpace(isbn))
+            var book = await _bookService.GetBookByISBNAsync(isbn);
+            if (book == null)
             {
-                _logger.LogError("ISBN cannot be null or empty.");
-                return BadRequest(new { Message = "Invalid ISBN." });
+                return NotFound();
             }
-
-            try
-            {
-                var book = await _bookService.GetBookByISBNAsync(isbn);
-                if (book == null)
-                {
-                    return NotFound();
-                }
-                var bookDto = _mapper.Map<BookDto>(book);
-
-                var baseImageUrl = $"{Request.Scheme}://{Request.Host}/images/";
-                bookDto.ImageUrl = $"{baseImageUrl}{Path.GetFileName(book.ImagePath)}";
-
-                return Ok(bookDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetBookByISBN");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+            var bookDto = _mapper.Map<BookDto>(book);
+            return Ok(bookDto);
         }
 
         [HttpPost]
@@ -212,48 +160,23 @@ namespace WebApi.Controllers
         [Authorize(Policy = "DeletePolicy")]
         public async Task<IActionResult> DeleteBook(Guid id)
         {
-            if (id == Guid.Empty)
-            {
-                _logger.LogError("Invalid book ID.");
-                return BadRequest(new { Message = "Invalid book ID." });
-            }
-
-            try
-            {
-                await _bookService.DeleteBookAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in DeleteBook");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+            await _bookService.DeleteBookAsync(id);
+            return NoContent();
         }
 
         [HttpPost("{id}/borrow")]
         [Authorize(Policy = "WritePolicy")]
         public async Task<IActionResult> BorrowBook(Guid id, [FromBody] BorrowBookDto borrowBookDto)
         {
-            if (id == Guid.Empty || borrowBookDto == null)
+            if (id != borrowBookDto.BookId)
             {
-                _logger.LogError("Invalid book ID or BorrowBookDto.");
-                return BadRequest(new { Message = "Invalid request." });
+                return BadRequest();
             }
 
-            try
-            {
-                var borrowedTime = DateTime.UtcNow;
-                _logger.LogInformation($"BorrowBook: borrowedTime={borrowedTime}, dueDate={borrowBookDto.DueDate}");
-                await _bookService.BorrowBookAsync(id, borrowedTime, borrowBookDto.DueDate);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in BorrowBook");
-                return StatusCode(500, new { Message = "Internal server error." });
-            }
+            var borrowedTime = DateTime.UtcNow;
+            await _bookService.BorrowBookAsync(id, borrowedTime, borrowBookDto.DueDate);
+            return NoContent();
         }
-
 
         [HttpPost("{id}/addImage")]
         [Authorize(Policy = "WritePolicy")]
