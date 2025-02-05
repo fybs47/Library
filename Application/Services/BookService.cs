@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using AutoMapper;
+using DataAccess.Models;
 using DataAccess.Repositories;
 using Domain.Models;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +23,7 @@ namespace Application.Services
         {
             return $"http://localhost:5080/images/{Path.GetFileName(imagePath)}";
         }
-        
+
         public async Task<string> SaveBookImageAsync(Guid id, IFormFile file)
         {
             if (!Directory.Exists(_imagesFolderPath))
@@ -59,6 +60,22 @@ namespace Application.Services
             return bookModels;
         }
 
+        public async Task<(IEnumerable<Book>, int)> GetBooksAsync(int pageNumber, int pageSize)
+        {
+            var (books, totalCount) = await _bookRepository.GetBooksAsync(pageNumber, pageSize);
+            var bookModels = _mapper.Map<IEnumerable<Book>>(books);
+
+            foreach (var book in bookModels)
+            {
+                if (!string.IsNullOrEmpty(book.ImagePath))
+                {
+                    book.ImagePath = FormImageUrl(book.ImagePath);
+                }
+            }
+
+            return (bookModels, totalCount);
+        }
+
         public async Task<Book> GetBookByIdAsync(Guid id)
         {
             var book = await _bookRepository.GetBookByIdAsync(id);
@@ -80,15 +97,28 @@ namespace Application.Services
 
         public async Task AddBookAsync(Book book)
         {
-            var bookEntity = _mapper.Map<DataAccess.Models.BookEntity>(book);
+            if (book == null)
+            {
+                throw new ArgumentNullException(nameof(book));
+            }
+
+            var bookEntity = _mapper.Map<BookEntity>(book);
             await _bookRepository.AddBookAsync(bookEntity);
+
+            book.Id = bookEntity.Id;
         }
 
         public async Task UpdateBookAsync(Book book)
         {
-            var bookEntity = _mapper.Map<DataAccess.Models.BookEntity>(book);
+            if (book == null)
+            {
+                throw new ArgumentNullException(nameof(book));
+            }
+
+            var bookEntity = _mapper.Map<BookEntity>(book);
             await _bookRepository.UpdateBookAsync(bookEntity);
         }
+
 
         public async Task DeleteBookAsync(Guid id)
         {
@@ -105,6 +135,4 @@ namespace Application.Services
             await _bookRepository.AddBookImageAsync(id, imagePath);
         }
     }
-    
-    
 }

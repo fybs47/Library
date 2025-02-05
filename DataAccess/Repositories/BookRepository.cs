@@ -33,16 +33,38 @@ namespace DataAccess.Repositories
 
         public async Task AddBookAsync(BookEntity book)
         {
+            if (book == null)
+            {
+                throw new ArgumentNullException(nameof(book));
+            }
+            
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
         }
-
+        
         public async Task UpdateBookAsync(BookEntity book)
         {
-            _context.Entry(book).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-        }
+            var local = _context.Set<BookEntity>()
+                .Local
+                .FirstOrDefault(entry => entry.Id.Equals(book.Id));
+            if (local != null)
+            {
+                _context.Entry(local).State = EntityState.Detached;
+            }
 
+            _context.Attach(book);
+            _context.Entry(book).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                throw new DbUpdateConcurrencyException("The database operation was expected to affect 1 row(s), but actually affected 0 row(s); data may have been modified or deleted since entities were loaded.", ex);
+            }
+        }
+        
         public async Task DeleteBookAsync(Guid id)
         {
             var book = await _context.Books.FindAsync(id);
@@ -74,6 +96,17 @@ namespace DataAccess.Repositories
                 _context.Entry(book).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<(IEnumerable<BookEntity>, int)> GetBooksAsync(int pageNumber, int pageSize)
+        {
+            var totalBooks = await _context.Books.CountAsync();
+            var books = await _context.Books
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (books, totalBooks);
         }
     }
 }

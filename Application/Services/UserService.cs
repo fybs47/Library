@@ -92,8 +92,6 @@ namespace Application.Services
             return refreshToken;
         }
 
-
-
         public async Task<User> GetUserByRefreshTokenAsync(string refreshToken)
         {
             var userEntity = await _userRepository.GetUserByRefreshTokenAsync(refreshToken);

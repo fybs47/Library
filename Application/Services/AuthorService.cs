@@ -33,6 +33,7 @@ namespace Application.Services
         {
             var authorEntity = _mapper.Map<DataAccess.Models.AuthorEntity>(author);
             await _authorRepository.AddAuthorAsync(authorEntity);
+            author.Id = authorEntity.Id;
         }
 
         public async Task UpdateAuthorAsync(Author author)
