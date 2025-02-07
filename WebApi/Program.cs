@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -8,17 +9,25 @@ using Application.Services;
 using WebApi.MappingProfiles;
 using System.Text;
 using Application.Abstractions;
+using DataAccess.Models;
+using Domain.Models;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Retry;
+using WebApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? 
+                       Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
 builder.Services.AddDbContext<ApplicationContext>(options =>
 {
     options.UseNpgsql(connectionString);
 });
 
+builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection("AdminSettings"));
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -119,15 +128,12 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-        c.RoutePrefix = string.Empty; 
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+    c.RoutePrefix = string.Empty; 
+});
 
 app.UseHttpsRedirection();
 app.UseAuthentication(); 
@@ -140,4 +146,62 @@ app.UseMiddleware<JwtValidationMiddleware>();
 
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<ApplicationContext>();
+    var adminSettings = services.GetRequiredService<IOptions<AdminSettings>>().Value;
+
+    if (context.Database.GetPendingMigrations().Any())
+    {
+        context.Database.Migrate();
+    }
+
+    if (!context.Users.Any(u => u.Username == adminSettings.Username))
+    {
+        var admin = new UserEntity()
+        {
+            Username = adminSettings.Username,
+            PasswordHash = adminSettings.PasswordHash, 
+            Email = adminSettings.Email,
+            Role = adminSettings.Role
+        };
+
+        context.Users.Add(admin);
+        context.SaveChanges();
+
+        Console.WriteLine("Аккаунт администратора создан.");
+    }
+    else
+    {
+        Console.WriteLine("Аккаунт администратора уже существует.");
+    }
+}
+
+
+var retryPolicy = Policy.Handle<Exception>()
+    .WaitAndRetry(
+        retryCount: 5,
+        sleepDurationProvider: attempt => TimeSpan.FromSeconds(10),
+        onRetry: (exception, timeSpan, context) =>
+        {
+            Console.WriteLine($"Не удалось подключиться к базе данных: {exception.Message}. Повторная попытка через {timeSpan.TotalSeconds} секунд.");
+        });
+
+retryPolicy.Execute(() =>
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var context = services.GetRequiredService<ApplicationContext>();
+
+        context.Database.Migrate();
+        Console.WriteLine("Миграции успешно применены.");
+    }
+});
+
 app.Run();
+
+
+
+
