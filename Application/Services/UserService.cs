@@ -3,6 +3,8 @@ using DataAccess.Repositories;
 using Domain.Models;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
+using Application.Exсeptions;
 
 namespace Application.Services
 {
@@ -20,18 +22,30 @@ namespace Application.Services
         public async Task<User> GetUserByIdAsync(Guid id)
         {
             var userEntity = await _userRepository.GetUserByIdAsync(id);
+            if (userEntity == null)
+            {
+                throw new NotFoundException("Пользователь не найден");
+            }
             return _mapper.Map<User>(userEntity);
         }
 
         public async Task<User> GetUserByUsernameAsync(string username)
         {
             var userEntity = await _userRepository.GetUserByUsernameAsync(username);
+            if (userEntity == null)
+            {
+                throw new NotFoundException("Пользователь не найден");
+            }
             return _mapper.Map<User>(userEntity);
         }
 
         public async Task<User> GetUserByEmailAsync(string email)
         {
             var userEntity = await _userRepository.GetUserByEmailAsync(email);
+            if (userEntity == null)
+            {
+                throw new NotFoundException("Пользователь не найден");
+            }
             return _mapper.Map<User>(userEntity);
         }
 
@@ -39,12 +53,12 @@ namespace Application.Services
         {
             if (await _userRepository.GetUserByUsernameAsync(user.Username) != null)
             {
-                throw new ArgumentException("User with this username already exists.");
+                throw new ConflictException("Пользователь с таким именем уже существует");
             }
 
             if (await _userRepository.GetUserByEmailAsync(user.Email) != null)
             {
-                throw new ArgumentException("User with this email already exists.");
+                throw new ConflictException("Пользователь с таким email уже существует");
             }
 
             user.PasswordHash = HashPassword(password);
@@ -54,12 +68,28 @@ namespace Application.Services
 
         public async Task UpdateUserAsync(User user)
         {
+            if (user == null)
+            {
+                throw new BadRequestException("Невозможно обновить пустого пользователя");
+            }
+
+            var existingUser = await _userRepository.GetUserByIdAsync(user.Id);
+            if (existingUser == null)
+            {
+                throw new NotFoundException("Пользователь не найден");
+            }
+
             var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
             await _userRepository.UpdateUserAsync(userEntity);
         }
 
         public async Task DeleteUserAsync(Guid id)
         {
+            var existingUser = await _userRepository.GetUserByIdAsync(id);
+            if (existingUser == null)
+            {
+                throw new NotFoundException("Пользователь не найден");
+            }
             await _userRepository.DeleteUserAsync(id);
         }
 
@@ -68,7 +98,7 @@ namespace Application.Services
             var userEntity = await _userRepository.GetUserByUsernameAsync(username);
             if (userEntity == null || !VerifyPassword(password, userEntity.PasswordHash))
             {
-                return null;
+                throw new UnauthorizedException("Неверное имя пользователя или пароль");
             }
 
             return _mapper.Map<User>(userEntity);
@@ -81,7 +111,7 @@ namespace Application.Services
             var userEntity = await _userRepository.GetUserByIdAsync(user.Id);
             if (userEntity == null)
             {
-                throw new Exception("User not found.");
+                throw new NotFoundException("Пользователь не найден");
             }
 
             var refreshToken = Guid.NewGuid().ToString();
@@ -95,6 +125,10 @@ namespace Application.Services
         public async Task<User> GetUserByRefreshTokenAsync(string refreshToken)
         {
             var userEntity = await _userRepository.GetUserByRefreshTokenAsync(refreshToken);
+            if (userEntity == null)
+            {
+                throw new NotFoundException("Пользователь не найден");
+            }
             return _mapper.Map<User>(userEntity);
         }
 

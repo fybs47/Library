@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
+using Application.Exсeptions;
 
 public class JwtValidationMiddleware
 {
@@ -21,9 +22,7 @@ public class JwtValidationMiddleware
 
         if (!context.User.Identity.IsAuthenticated)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Unauthorized: Access is denied due to invalid credentials.");
-            return;
+            throw new UnauthorizedException("Unauthorized: Access is denied due to invalid credentials.");
         }
 
         await _next(context);

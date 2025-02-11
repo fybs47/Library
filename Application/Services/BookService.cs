@@ -4,6 +4,12 @@ using DataAccess.Models;
 using DataAccess.Repositories;
 using Domain.Models;
 using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Application.Exсeptions;
 
 namespace Application.Services
 {
@@ -47,6 +53,10 @@ namespace Application.Services
         public async Task<IEnumerable<Book>> GetAllBooksAsync()
         {
             var books = await _bookRepository.GetAllBooksAsync();
+            if (books == null || !books.Any())
+            {
+                throw new NotFoundException("Книги не найдены");
+            }
             var bookModels = _mapper.Map<IEnumerable<Book>>(books);
 
             foreach (var book in bookModels)
@@ -63,6 +73,10 @@ namespace Application.Services
         public async Task<(IEnumerable<Book>, int)> GetBooksAsync(int pageNumber, int pageSize)
         {
             var (books, totalCount) = await _bookRepository.GetBooksAsync(pageNumber, pageSize);
+            if (books == null || !books.Any())
+            {
+                throw new NotFoundException("Книги не найдены");
+            }
             var bookModels = _mapper.Map<IEnumerable<Book>>(books);
 
             foreach (var book in bookModels)
@@ -79,6 +93,10 @@ namespace Application.Services
         public async Task<Book> GetBookByIdAsync(Guid id)
         {
             var book = await _bookRepository.GetBookByIdAsync(id);
+            if (book == null)
+            {
+                throw new NotFoundException("Книга не найдена");
+            }
             var bookModel = _mapper.Map<Book>(book);
 
             if (!string.IsNullOrEmpty(bookModel.ImagePath))
@@ -92,6 +110,10 @@ namespace Application.Services
         public async Task<Book> GetBookByISBNAsync(string isbn)
         {
             var book = await _bookRepository.GetBookByISBNAsync(isbn);
+            if (book == null)
+            {
+                throw new NotFoundException("Книга не найдена");
+            }
             return _mapper.Map<Book>(book);
         }
 
@@ -99,7 +121,13 @@ namespace Application.Services
         {
             if (book == null)
             {
-                throw new ArgumentNullException(nameof(book));
+                throw new BadRequestException("Невозможно добавить пустую книгу");
+            }
+
+            var existingBook = await _bookRepository.GetBookByIdAsync(book.Id);
+            if (existingBook != null)
+            {
+                throw new ConflictException("Книга с таким идентификатором уже существует");
             }
 
             var bookEntity = _mapper.Map<BookEntity>(book);
@@ -112,26 +140,46 @@ namespace Application.Services
         {
             if (book == null)
             {
-                throw new ArgumentNullException(nameof(book));
+                throw new BadRequestException("Невозможно обновить пустую книгу");
+            }
+
+            var existingBook = await _bookRepository.GetBookByIdAsync(book.Id);
+            if (existingBook == null)
+            {
+                throw new NotFoundException("Книга не найдена");
             }
 
             var bookEntity = _mapper.Map<BookEntity>(book);
             await _bookRepository.UpdateBookAsync(bookEntity);
         }
 
-
         public async Task DeleteBookAsync(Guid id)
         {
+            var existingBook = await _bookRepository.GetBookByIdAsync(id);
+            if (existingBook == null)
+            {
+                throw new NotFoundException("Книга не найдена");
+            }
             await _bookRepository.DeleteBookAsync(id);
         }
 
         public async Task BorrowBookAsync(Guid id, DateTime borrowedTime, DateTime dueDate)
         {
+            var existingBook = await _bookRepository.GetBookByIdAsync(id);
+            if (existingBook == null)
+            {
+                throw new NotFoundException("Книга не найдена");
+            }
             await _bookRepository.BorrowBookAsync(id, borrowedTime, dueDate);
         }
 
         public async Task AddBookImageAsync(Guid id, string imagePath)
         {
+            var existingBook = await _bookRepository.GetBookByIdAsync(id);
+            if (existingBook == null)
+            {
+                throw new NotFoundException("Книга не найдена");
+            }
             await _bookRepository.AddBookImageAsync(id, imagePath);
         }
     }

@@ -35,10 +35,6 @@ namespace WebApi.Controllers
         public async Task<IActionResult> GetAuthorById(Guid id)
         {
             var author = await _authorService.GetAuthorByIdAsync(id);
-            if (author == null)
-            {
-                return NotFound();
-            }
             var authorDto = _mapper.Map<AuthorDto>(author);
             return Ok(authorDto);
         }
@@ -57,11 +53,6 @@ namespace WebApi.Controllers
         [Authorize(Policy = "UpdatePolicy")]
         public async Task<IActionResult> UpdateAuthor(Guid id, [FromBody] UpdateAuthorDto updateAuthorDto)
         {
-            if (id != updateAuthorDto.Id)
-            {
-                return BadRequest();
-            }
-
             var author = _mapper.Map<Author>(updateAuthorDto);
             await _authorService.UpdateAuthorAsync(author);
             return NoContent();

@@ -30,53 +30,36 @@ namespace WebApi.Controllers
         {
             var user = _mapper.Map<User>(registerUserDto);
 
-            try
+            await _userService.RegisterUserAsync(user, registerUserDto.Password);
+
+            var savedUser = await _userService.GetUserByUsernameAsync(user.Username);
+            
+            var tokenString = GenerateJwtToken(savedUser);
+            var refreshToken = await _userService.GenerateRefreshTokenAsync(savedUser);
+
+            Response.Cookies.Append("access_token", tokenString, new CookieOptions
             {
-                await _userService.RegisterUserAsync(user, registerUserDto.Password);
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None
+            });
 
-                var savedUser = await _userService.GetUserByUsernameAsync(user.Username);
-                if (savedUser == null)
-                {
-                    throw new Exception("User registration failed.");
-                }
-
-                var tokenString = GenerateJwtToken(savedUser);
-                var refreshToken = await _userService.GenerateRefreshTokenAsync(savedUser);
-
-                Response.Cookies.Append("access_token", tokenString, new CookieOptions
-                {
-                    HttpOnly = false,
-                    Secure = true,
-                    SameSite = SameSiteMode.None
-                });
-
-                Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
-                {
-                    HttpOnly = false,
-                    Secure = true,
-                    SameSite = SameSiteMode.None,
-                    Expires = DateTime.UtcNow.AddDays(7)
-                });
-
-                return Ok(new { Token = tokenString, RefreshToken = refreshToken });
-            }
-            catch (ArgumentException ex)
+            Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
             {
-                return BadRequest(new { Message = ex.Message });
-            }
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddDays(7)
+            });
+
+            return Ok(new { Token = tokenString, RefreshToken = refreshToken });
         }
-
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
             var user = await _userService.AuthenticateUserAsync(loginDto.Username, loginDto.Password);
-
-            if (user == null)
-            {
-                return Unauthorized(new { Message = "Invalid username or password" });
-            }
-
+            
             var tokenString = GenerateJwtToken(user);
             var refreshToken = await _userService.GenerateRefreshTokenAsync(user);
 
@@ -108,10 +91,6 @@ namespace WebApi.Controllers
             }
 
             var user = await _userService.GetUserByRefreshTokenAsync(refreshToken);
-            if (user == null)
-            {
-                return Unauthorized(new { Message = "Invalid refresh token" });
-            }
 
             var tokenString = GenerateJwtToken(user);
             var newRefreshToken = await _userService.GenerateRefreshTokenAsync(user);

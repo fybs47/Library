@@ -1,13 +1,13 @@
 using AutoMapper;
+using DataAccess.Models;
 using Domain.Models;
 using WebApi.Contracts;
-using DataAccess.Models;
 
 namespace WebApi.MappingProfiles
 {
-    public class MappingProfile : Profile
+    public class BookMappingProfile : Profile
     {
-        public MappingProfile()
+        public BookMappingProfile()
         {
             CreateMap<Book, BookDto>().ReverseMap();
             CreateMap<CreateBookDto, Book>()
@@ -22,15 +22,6 @@ namespace WebApi.MappingProfiles
 
             CreateMap<Book, BookEntity>().ReverseMap()
                 .ForMember(dest => dest.Author, opt => opt.Ignore()); // Игнорируем навигационное свойство
-
-            CreateMap<Author, AuthorDto>().ReverseMap();
-            CreateMap<CreateAuthorDto, Author>();
-            CreateMap<UpdateAuthorDto, Author>();
-
-            CreateMap<Author, AuthorEntity>().ReverseMap();
-
-            CreateMap<User, UserEntity>().ReverseMap();
-            CreateMap<RegisterUserDto, User>();
         }
     }
 }

@@ -6,7 +6,6 @@ using Microsoft.OpenApi.Models;
 using DataAccess;
 using DataAccess.Repositories;
 using Application.Services;
-using WebApi.MappingProfiles;
 using System.Text;
 using Application.Abstractions;
 using DataAccess.Models;
@@ -16,6 +15,7 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
 using WebApi;
+using WebApi.MappingProfiles; 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +36,12 @@ builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<BookMappingProfile>();
+    cfg.AddProfile<AuthorMappingProfile>();
+    cfg.AddProfile<UserMappingProfile>();
+});
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 
@@ -136,13 +141,15 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseAuthentication(); 
+app.UseMiddleware<JwtValidationMiddleware>();
 app.UseAuthorization();  
 app.UseStaticFiles();
 
 app.UseCors("AllowSpecificOrigin");
-
-app.UseMiddleware<JwtValidationMiddleware>();
 
 app.MapControllers();
 
@@ -177,7 +184,6 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine("Аккаунт администратора уже существует.");
     }
 }
-
 
 var retryPolicy = Policy.Handle<Exception>()
     .WaitAndRetry(
