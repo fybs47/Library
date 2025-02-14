@@ -25,7 +25,7 @@ namespace Application.Services
 
         public async Task<IEnumerable<Author>> GetAllAuthorsAsync(CancellationToken cancellationToken)
         {
-            var authors = await _authorRepository.GetAllAuthorsAsync(cancellationToken);
+            var authors = await _authorRepository.GetAllAsync(cancellationToken);
             if (authors == null || !authors.Any())
             {
                 throw new NotFoundException("Авторы не найдены");
@@ -35,7 +35,7 @@ namespace Application.Services
 
         public async Task<Author> GetAuthorByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            var author = await _authorRepository.GetAuthorByIdAsync(id, cancellationToken);
+            var author = await _authorRepository.GetByIdAsync(id, cancellationToken);
             if (author == null)
             {
                 throw new NotFoundException("Автор не найден");
@@ -45,37 +45,20 @@ namespace Application.Services
 
         public async Task AddAuthorAsync(Author author, CancellationToken cancellationToken)
         {
-            var existingAuthor = await _authorRepository.GetAuthorByIdAsync(author.Id, cancellationToken);
-            if (existingAuthor != null)
-            {
-                throw new ConflictException("Автор с таким идентификатором уже существует");
-            }
-
             var authorEntity = _mapper.Map<DataAccess.Models.AuthorEntity>(author);
-            await _authorRepository.AddAuthorAsync(authorEntity, cancellationToken);
+            await _authorRepository.AddAsync(authorEntity, cancellationToken);
             author.Id = authorEntity.Id;
         }
 
         public async Task UpdateAuthorAsync(Author author, CancellationToken cancellationToken)
         {
-            var existingAuthor = await _authorRepository.GetAuthorByIdAsync(author.Id, cancellationToken);
-            if (existingAuthor == null)
-            {
-                throw new NotFoundException("Автор не найден");
-            }
-
             var authorEntity = _mapper.Map<DataAccess.Models.AuthorEntity>(author);
-            await _authorRepository.UpdateAuthorAsync(authorEntity, cancellationToken);
+            await _authorRepository.UpdateAsync(authorEntity, cancellationToken);
         }
 
         public async Task DeleteAuthorAsync(Guid id, CancellationToken cancellationToken)
         {
-            var existingAuthor = await _authorRepository.GetAuthorByIdAsync(id, cancellationToken);
-            if (existingAuthor == null)
-            {
-                throw new NotFoundException("Автор не найден");
-            }
-            await _authorRepository.DeleteAuthorAsync(id, cancellationToken);
+            await _authorRepository.DeleteAsync(id, cancellationToken);
         }
 
         private string FormImageUrl(string imagePath)
@@ -85,12 +68,6 @@ namespace Application.Services
 
         public async Task<IEnumerable<Book>> GetBooksByAuthorAsync(Guid authorId, CancellationToken cancellationToken)
         {
-            var author = await _authorRepository.GetAuthorByIdAsync(authorId, cancellationToken);
-            if (author == null)
-            {
-                throw new NotFoundException("Автор не найден");
-            }
-
             var books = await _authorRepository.GetBooksByAuthorAsync(authorId, cancellationToken);
             if (books == null || !books.Any())
             {

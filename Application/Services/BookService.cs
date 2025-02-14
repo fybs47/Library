@@ -53,7 +53,7 @@ namespace Application.Services
 
         public async Task<IEnumerable<Book>> GetAllBooksAsync(CancellationToken cancellationToken)
         {
-            var books = await _bookRepository.GetAllBooksAsync(cancellationToken);
+            var books = await _bookRepository.GetAllAsync(cancellationToken);
             if (books == null || !books.Any())
             {
                 throw new NotFoundException("Книги не найдены");
@@ -93,7 +93,7 @@ namespace Application.Services
 
         public async Task<Book> GetBookByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            var book = await _bookRepository.GetBookByIdAsync(id, cancellationToken);
+            var book = await _bookRepository.GetByIdAsync(id, cancellationToken);
             if (book == null)
             {
                 throw new NotFoundException("Книга не найдена");
@@ -125,18 +125,11 @@ namespace Application.Services
                 throw new BadRequestException("Невозможно добавить пустую книгу");
             }
 
-            var existingBook = await _bookRepository.GetBookByIdAsync(book.Id, cancellationToken);
-            if (existingBook != null)
-            {
-                throw new ConflictException("Книга с таким идентификатором уже существует");
-            }
-
             var bookEntity = _mapper.Map<BookEntity>(book);
-            await _bookRepository.AddBookAsync(bookEntity, cancellationToken);
+            await _bookRepository.AddAsync(bookEntity, cancellationToken);
 
             book.Id = bookEntity.Id;
         }
-
         public async Task UpdateBookAsync(Book book, CancellationToken cancellationToken)
         {
             if (book == null)
@@ -144,29 +137,29 @@ namespace Application.Services
                 throw new BadRequestException("Невозможно обновить пустую книгу");
             }
 
-            var existingBook = await _bookRepository.GetBookByIdAsync(book.Id, cancellationToken);
+            var existingBook = await _bookRepository.GetByIdAsync(book.Id, cancellationToken);
             if (existingBook == null)
             {
                 throw new NotFoundException("Книга не найдена");
             }
 
             var bookEntity = _mapper.Map<BookEntity>(book);
-            await _bookRepository.UpdateBookAsync(bookEntity, cancellationToken);
+            await _bookRepository.UpdateAsync(bookEntity, cancellationToken);
         }
 
         public async Task DeleteBookAsync(Guid id, CancellationToken cancellationToken)
         {
-            var existingBook = await _bookRepository.GetBookByIdAsync(id, cancellationToken);
+            var existingBook = await _bookRepository.GetByIdAsync(id, cancellationToken);
             if (existingBook == null)
             {
                 throw new NotFoundException("Книга не найдена");
             }
-            await _bookRepository.DeleteBookAsync(id, cancellationToken);
+            await _bookRepository.DeleteAsync(id, cancellationToken);
         }
 
         public async Task BorrowBookAsync(Guid id, DateTime borrowedTime, DateTime dueDate, CancellationToken cancellationToken)
         {
-            var existingBook = await _bookRepository.GetBookByIdAsync(id, cancellationToken);
+            var existingBook = await _bookRepository.GetByIdAsync(id, cancellationToken);
             if (existingBook == null)
             {
                 throw new NotFoundException("Книга не найдена");
@@ -176,7 +169,7 @@ namespace Application.Services
 
         public async Task AddBookImageAsync(Guid id, string imagePath, CancellationToken cancellationToken)
         {
-            var existingBook = await _bookRepository.GetBookByIdAsync(id, cancellationToken);
+            var existingBook = await _bookRepository.GetByIdAsync(id, cancellationToken);
             if (existingBook == null)
             {
                 throw new NotFoundException("Книга не найдена");
@@ -185,3 +178,4 @@ namespace Application.Services
         }
     }
 }
+

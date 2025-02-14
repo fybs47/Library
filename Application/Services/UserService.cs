@@ -22,7 +22,7 @@ namespace Application.Services
 
         public async Task<User> GetUserByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            var userEntity = await _userRepository.GetUserByIdAsync(id, cancellationToken);
+            var userEntity = await _userRepository.GetByIdAsync(id, cancellationToken);
             if (userEntity == null)
             {
                 throw new NotFoundException("Пользователь не найден");
@@ -64,7 +64,7 @@ namespace Application.Services
 
             user.PasswordHash = HashPassword(password);
             var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
-            await _userRepository.AddUserAsync(userEntity, cancellationToken);
+            await _userRepository.AddAsync(userEntity, cancellationToken);
         }
 
         public async Task UpdateUserAsync(User user, CancellationToken cancellationToken)
@@ -74,24 +74,24 @@ namespace Application.Services
                 throw new BadRequestException("Невозможно обновить пустого пользователя");
             }
 
-            var existingUser = await _userRepository.GetUserByIdAsync(user.Id, cancellationToken);
+            var existingUser = await _userRepository.GetByIdAsync(user.Id, cancellationToken);
             if (existingUser == null)
             {
                 throw new NotFoundException("Пользователь не найден");
             }
 
             var userEntity = _mapper.Map<DataAccess.Models.UserEntity>(user);
-            await _userRepository.UpdateUserAsync(userEntity, cancellationToken);
+            await _userRepository.UpdateAsync(userEntity, cancellationToken);
         }
 
         public async Task DeleteUserAsync(Guid id, CancellationToken cancellationToken)
         {
-            var existingUser = await _userRepository.GetUserByIdAsync(id, cancellationToken);
+            var existingUser = await _userRepository.GetByIdAsync(id, cancellationToken);
             if (existingUser == null)
             {
                 throw new NotFoundException("Пользователь не найден");
             }
-            await _userRepository.DeleteUserAsync(id, cancellationToken);
+            await _userRepository.DeleteAsync(id, cancellationToken);
         }
 
         public async Task<User> AuthenticateUserAsync(string username, string password, CancellationToken cancellationToken)
@@ -109,7 +109,7 @@ namespace Application.Services
         {
             _userRepository.DetachLocal(user.Id);
 
-            var userEntity = await _userRepository.GetUserByIdAsync(user.Id, cancellationToken);
+            var userEntity = await _userRepository.GetByIdAsync(user.Id, cancellationToken);
             if (userEntity == null)
             {
                 throw new NotFoundException("Пользователь не найден");
@@ -119,7 +119,7 @@ namespace Application.Services
             userEntity.RefreshToken = refreshToken;
             userEntity.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
 
-            await _userRepository.UpdateUserAsync(userEntity, cancellationToken);
+            await _userRepository.UpdateAsync(userEntity, cancellationToken);
             return refreshToken;
         }
 
