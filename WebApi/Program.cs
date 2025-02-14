@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using DataAccess;
 using DataAccess.Repositories;
+using DataAccess.Validators;
+using FluentValidation;
 using Application.Services;
 using System.Text;
 using Application.Abstractions;
@@ -42,6 +44,10 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<AuthorMappingProfile>();
     cfg.AddProfile<UserMappingProfile>();
 });
+
+builder.Services.AddScoped<IValidator<UserEntity>, UserValidator>();
+builder.Services.AddScoped<IValidator<BookEntity>, BookValidator>();
+builder.Services.AddScoped<IValidator<AuthorEntity>, AuthorValidator>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 
@@ -207,7 +213,4 @@ retryPolicy.Execute(() =>
 });
 
 app.Run();
-
-
-
-
+    

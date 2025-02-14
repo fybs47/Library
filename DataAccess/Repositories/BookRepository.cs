@@ -1,49 +1,61 @@
+using DataAccess.Models;
+using DataAccess.Validators;
+using FluentValidation;
+using FluentValidation.Results;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using DataAccess.Models;
 
 namespace DataAccess.Repositories
 {
     public class BookRepository : IBookRepository
     {
         private readonly ApplicationContext _context;
+        private readonly IValidator<BookEntity> _bookValidator;
 
-        public BookRepository(ApplicationContext context)
+        public BookRepository(ApplicationContext context, IValidator<BookEntity> bookValidator)
         {
             _context = context;
+            _bookValidator = bookValidator;
         }
 
         public async Task<IEnumerable<BookEntity>> GetAllBooksAsync()
         {
-            return await _context.Books.ToListAsync();
+            return await _context.Books.AsNoTracking().ToListAsync();
         }
 
         public async Task<BookEntity> GetBookByIdAsync(Guid id)
         {
-            return await _context.Books.FindAsync(id);
+            return await _context.Books.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id);
         }
 
         public async Task<BookEntity> GetBookByISBNAsync(string isbn)
         {
-            return await _context.Books.FirstOrDefaultAsync(b => b.ISBN == isbn);
+            return await _context.Books.AsNoTracking().FirstOrDefaultAsync(b => b.ISBN == isbn);
         }
 
         public async Task AddBookAsync(BookEntity book)
         {
-            if (book == null)
+            ValidationResult validationResult = await _bookValidator.ValidateAsync(book);
+            if (!validationResult.IsValid)
             {
-                throw new ArgumentNullException(nameof(book));
+                throw new ValidationException("Book entity validation failed", validationResult.Errors);
             }
-            
+
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
         }
-        
+
         public async Task UpdateBookAsync(BookEntity book)
         {
+            ValidationResult validationResult = await _bookValidator.ValidateAsync(book);
+            if (!validationResult.IsValid)
+            {
+                throw new ValidationException("Book entity validation failed", validationResult.Errors);
+            }
+
             var local = _context.Set<BookEntity>()
                 .Local
                 .FirstOrDefault(entry => entry.Id.Equals(book.Id));
@@ -64,7 +76,7 @@ namespace DataAccess.Repositories
                 throw new DbUpdateConcurrencyException("The database operation was expected to affect 1 row(s), but actually affected 0 row(s); data may have been modified or deleted since entities were loaded.", ex);
             }
         }
-        
+
         public async Task DeleteBookAsync(Guid id)
         {
             var book = await _context.Books.FindAsync(id);
@@ -92,6 +104,12 @@ namespace DataAccess.Repositories
             var book = await _context.Books.FindAsync(id);
             if (book != null)
             {
+                ValidationResult validationResult = _bookValidator.Validate(book);
+                if (!validationResult.IsValid)
+                {
+                    throw new ValidationException("Book entity validation failed", validationResult.Errors);
+                }
+                
                 book.ImagePath = imagePath;
                 _context.Entry(book).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
@@ -101,7 +119,7 @@ namespace DataAccess.Repositories
         public async Task<(IEnumerable<BookEntity>, int)> GetBooksAsync(int pageNumber, int pageSize)
         {
             var totalBooks = await _context.Books.CountAsync();
-            var books = await _context.Books
+            var books = await _context.Books.AsNoTracking()
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
