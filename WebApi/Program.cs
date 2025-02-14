@@ -37,6 +37,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITokenService, TokenService>(); // регистрация TokenService
 
 builder.Services.AddAutoMapper(cfg =>
 {
@@ -213,4 +214,3 @@ retryPolicy.Execute(() =>
 });
 
 app.Run();
-    

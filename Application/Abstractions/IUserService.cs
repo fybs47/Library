@@ -4,13 +4,13 @@ namespace Application.Services
 {
     public interface IUserService
     {
-        Task<User> GetUserByIdAsync(Guid id);
-        Task<User> GetUserByUsernameAsync(string username);
-        Task RegisterUserAsync(User user, string password);
-        Task UpdateUserAsync(User user);
-        Task DeleteUserAsync(Guid id);
-        Task<User> AuthenticateUserAsync(string username, string password);
-        Task<String> GenerateRefreshTokenAsync(User user);
-        Task<User> GetUserByRefreshTokenAsync(string refreshToken);
+        Task<User> GetUserByIdAsync(Guid id, CancellationToken cancellationToken);
+        Task<User> GetUserByUsernameAsync(string username, CancellationToken cancellationToken);
+        Task RegisterUserAsync(User user, string password, CancellationToken cancellationToken);
+        Task UpdateUserAsync(User user, CancellationToken cancellationToken);
+        Task DeleteUserAsync(Guid id, CancellationToken cancellationToken);
+        Task<User> AuthenticateUserAsync(string username, string password, CancellationToken cancellationToken);
+        Task<String> GenerateRefreshTokenAsync(User user, CancellationToken cancellationToken);
+        Task<User> GetUserByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken);
     }
 }

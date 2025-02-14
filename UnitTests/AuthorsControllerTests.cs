@@ -6,6 +6,7 @@ using Domain.Models;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Controllers;
 using WebApi.Contracts;
+using System.Threading;
 
 namespace UnitTests
 {
@@ -27,11 +28,12 @@ namespace UnitTests
         {
             var authors = new List<Author> { new Author { Id = Guid.NewGuid(), FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" } };
             var authorsDto = new List<AuthorDto> { new AuthorDto { Id = Guid.NewGuid(), FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" } };
+            var cancellationToken = new CancellationToken();
 
-            _mockAuthorService.Setup(service => service.GetAllAuthorsAsync()).ReturnsAsync(authors);
+            _mockAuthorService.Setup(service => service.GetAllAuthorsAsync(cancellationToken)).ReturnsAsync(authors);
             _mockMapper.Setup(mapper => mapper.Map<IEnumerable<AuthorDto>>(authors)).Returns(authorsDto);
 
-            var result = await _controller.GetAllAuthors();
+            var result = await _controller.GetAllAuthors(cancellationToken);
 
             var okResult = Assert.IsType<OkObjectResult>(result);
             var returnAuthors = Assert.IsType<List<AuthorDto>>(okResult.Value);
@@ -42,9 +44,10 @@ namespace UnitTests
         public async Task GetAuthorById_ReturnsNotFound_WhenAuthorDoesNotExist()
         {
             var authorId = Guid.NewGuid();
-            _mockAuthorService.Setup(service => service.GetAuthorByIdAsync(authorId)).ReturnsAsync((Author)null);
+            var cancellationToken = new CancellationToken();
+            _mockAuthorService.Setup(service => service.GetAuthorByIdAsync(authorId, cancellationToken)).ReturnsAsync((Author)null);
 
-            var result = await _controller.GetAuthorById(authorId);
+            var result = await _controller.GetAuthorById(authorId, cancellationToken);
 
             Assert.IsType<NotFoundResult>(result);
         }
@@ -55,11 +58,12 @@ namespace UnitTests
             var authorId = Guid.NewGuid();
             var author = new Author { Id = authorId, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
             var authorDto = new AuthorDto { Id = authorId, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
+            var cancellationToken = new CancellationToken();
 
-            _mockAuthorService.Setup(service => service.GetAuthorByIdAsync(authorId)).ReturnsAsync(author);
+            _mockAuthorService.Setup(service => service.GetAuthorByIdAsync(authorId, cancellationToken)).ReturnsAsync(author);
             _mockMapper.Setup(mapper => mapper.Map<AuthorDto>(author)).Returns(authorDto);
 
-            var result = await _controller.GetAuthorById(authorId);
+            var result = await _controller.GetAuthorById(authorId, cancellationToken);
 
             var okResult = Assert.IsType<OkObjectResult>(result);
             var returnAuthor = Assert.IsType<AuthorDto>(okResult.Value);
@@ -72,12 +76,13 @@ namespace UnitTests
             var createAuthorDto = new CreateAuthorDto { FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
             var author = new Author { Id = Guid.NewGuid(), FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
             var authorDto = new AuthorDto { Id = author.Id, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
+            var cancellationToken = new CancellationToken();
 
             _mockMapper.Setup(mapper => mapper.Map<Author>(createAuthorDto)).Returns(author);
-            _mockAuthorService.Setup(service => service.AddAuthorAsync(author)).Returns(Task.CompletedTask);
+            _mockAuthorService.Setup(service => service.AddAuthorAsync(author, cancellationToken)).Returns(Task.CompletedTask);
             _mockMapper.Setup(mapper => mapper.Map<AuthorDto>(author)).Returns(authorDto);
 
-            var result = await _controller.AddAuthor(createAuthorDto);
+            var result = await _controller.AddAuthor(createAuthorDto, cancellationToken);
 
             var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
             var returnAuthor = Assert.IsType<AuthorDto>(createdAtActionResult.Value);

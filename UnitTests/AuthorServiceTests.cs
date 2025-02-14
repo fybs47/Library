@@ -4,6 +4,7 @@ using AutoMapper;
 using Application.Services;
 using DataAccess.Repositories;
 using Domain.Models;
+using System.Threading;
 
 namespace Application.Tests
 {
@@ -27,11 +28,12 @@ namespace Application.Tests
         {
             var authorEntities = new List<DataAccess.Models.AuthorEntity> { new DataAccess.Models.AuthorEntity { Id = Guid.NewGuid(), FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" } };
             var authors = new List<Author> { new Author { Id = authorEntities[0].Id, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" } };
+            var cancellationToken = new CancellationToken();
 
-            _mockAuthorRepository.Setup(repo => repo.GetAllAuthorsAsync()).ReturnsAsync(authorEntities);
+            _mockAuthorRepository.Setup(repo => repo.GetAllAuthorsAsync(cancellationToken)).ReturnsAsync(authorEntities);
             _mockMapper.Setup(mapper => mapper.Map<IEnumerable<Author>>(authorEntities)).Returns(authors);
 
-            var result = await _authorService.GetAllAuthorsAsync();
+            var result = await _authorService.GetAllAuthorsAsync(cancellationToken);
 
             Assert.Equal(authors, result);
         }
@@ -42,11 +44,12 @@ namespace Application.Tests
             var authorId = Guid.NewGuid();
             var authorEntity = new DataAccess.Models.AuthorEntity { Id = authorId, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
             var author = new Author { Id = authorId, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
+            var cancellationToken = new CancellationToken();
 
-            _mockAuthorRepository.Setup(repo => repo.GetAuthorByIdAsync(authorId)).ReturnsAsync(authorEntity);
+            _mockAuthorRepository.Setup(repo => repo.GetAuthorByIdAsync(authorId, cancellationToken)).ReturnsAsync(authorEntity);
             _mockMapper.Setup(mapper => mapper.Map<Author>(authorEntity)).Returns(author);
 
-            var result = await _authorService.GetAuthorByIdAsync(authorId);
+            var result = await _authorService.GetAuthorByIdAsync(authorId, cancellationToken);
 
             Assert.Equal(author, result);
         }
@@ -56,12 +59,13 @@ namespace Application.Tests
         {
             var author = new Author { Id = Guid.NewGuid(), FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
             var authorEntity = new DataAccess.Models.AuthorEntity { Id = author.Id, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
+            var cancellationToken = new CancellationToken();
 
             _mockMapper.Setup(mapper => mapper.Map<DataAccess.Models.AuthorEntity>(author)).Returns(authorEntity);
 
-            await _authorService.AddAuthorAsync(author);
+            await _authorService.AddAuthorAsync(author, cancellationToken);
 
-            _mockAuthorRepository.Verify(repo => repo.AddAuthorAsync(authorEntity), Times.Once);
+            _mockAuthorRepository.Verify(repo => repo.AddAuthorAsync(authorEntity, cancellationToken), Times.Once);
         }
 
         [Fact]
@@ -69,22 +73,24 @@ namespace Application.Tests
         {
             var author = new Author { Id = Guid.NewGuid(), FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
             var authorEntity = new DataAccess.Models.AuthorEntity { Id = author.Id, FirstName = "John", LastName = "Doe", DateOfBirth = new DateTime(1990, 1, 1), Country = "USA" };
+            var cancellationToken = new CancellationToken();
 
             _mockMapper.Setup(mapper => mapper.Map<DataAccess.Models.AuthorEntity>(author)).Returns(authorEntity);
 
-            await _authorService.UpdateAuthorAsync(author);
+            await _authorService.UpdateAuthorAsync(author, cancellationToken);
 
-            _mockAuthorRepository.Verify(repo => repo.UpdateAuthorAsync(authorEntity), Times.Once);
+            _mockAuthorRepository.Verify(repo => repo.UpdateAuthorAsync(authorEntity, cancellationToken), Times.Once);
         }
 
         [Fact]
         public async Task DeleteAuthorAsync_CallsDeleteAuthorAsyncOnRepository()
         {
             var authorId = Guid.NewGuid();
+            var cancellationToken = new CancellationToken();
 
-            await _authorService.DeleteAuthorAsync(authorId);
+            await _authorService.DeleteAuthorAsync(authorId, cancellationToken);
 
-            _mockAuthorRepository.Verify(repo => repo.DeleteAuthorAsync(authorId), Times.Once);
+            _mockAuthorRepository.Verify(repo => repo.DeleteAuthorAsync(authorId, cancellationToken), Times.Once);
         }
 
         [Fact]
@@ -93,11 +99,12 @@ namespace Application.Tests
             var authorId = Guid.NewGuid();
             var bookEntities = new List<DataAccess.Models.BookEntity> { new DataAccess.Models.BookEntity { Id = Guid.NewGuid(), Title = "Test Book" } };
             var books = new List<Book> { new Book { Id = bookEntities[0].Id, Title = "Test Book" } };
+            var cancellationToken = new CancellationToken();
 
-            _mockAuthorRepository.Setup(repo => repo.GetBooksByAuthorAsync(authorId)).ReturnsAsync(bookEntities);
+            _mockAuthorRepository.Setup(repo => repo.GetBooksByAuthorAsync(authorId, cancellationToken)).ReturnsAsync(bookEntities);
             _mockMapper.Setup(mapper => mapper.Map<IEnumerable<Book>>(bookEntities)).Returns(books);
 
-            var result = await _authorService.GetBooksByAuthorAsync(authorId);
+            var result = await _authorService.GetBooksByAuthorAsync(authorId, cancellationToken);
 
             Assert.Equal(books, result);
         }

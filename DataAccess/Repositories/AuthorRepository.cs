@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DataAccess.Repositories
@@ -21,53 +22,53 @@ namespace DataAccess.Repositories
             _authorValidator = authorValidator;
         }
 
-        public async Task<IEnumerable<AuthorEntity>> GetAllAuthorsAsync()
+        public async Task<IEnumerable<AuthorEntity>> GetAllAuthorsAsync(CancellationToken cancellationToken)
         {
-            return await _context.Authors.AsNoTracking().ToListAsync();
+            return await _context.Authors.AsNoTracking().ToListAsync(cancellationToken);
         }
 
-        public async Task<AuthorEntity> GetAuthorByIdAsync(Guid id)
+        public async Task<AuthorEntity> GetAuthorByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            return await _context.Authors.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+            return await _context.Authors.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
         }
 
-        public async Task AddAuthorAsync(AuthorEntity author)
+        public async Task AddAuthorAsync(AuthorEntity author, CancellationToken cancellationToken)
         {
-            ValidationResult validationResult = await _authorValidator.ValidateAsync(author);
+            ValidationResult validationResult = await _authorValidator.ValidateAsync(author, cancellationToken);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException("Author entity validation failed", validationResult.Errors);
             }
 
             _context.Authors.Add(author);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task UpdateAuthorAsync(AuthorEntity author)
+        public async Task UpdateAuthorAsync(AuthorEntity author, CancellationToken cancellationToken)
         {
-            ValidationResult validationResult = await _authorValidator.ValidateAsync(author);
+            ValidationResult validationResult = await _authorValidator.ValidateAsync(author, cancellationToken);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException("Author entity validation failed", validationResult.Errors);
             }
 
             _context.Entry(author).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task DeleteAuthorAsync(Guid id)
+        public async Task DeleteAuthorAsync(Guid id, CancellationToken cancellationToken)
         {
-            var author = await _context.Authors.FindAsync(id);
+            var author = await _context.Authors.FindAsync(new object[] { id }, cancellationToken);
             if (author != null)
             {
                 _context.Authors.Remove(author);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
             }
         }
 
-        public async Task<IEnumerable<BookEntity>> GetBooksByAuthorAsync(Guid authorId)
+        public async Task<IEnumerable<BookEntity>> GetBooksByAuthorAsync(Guid authorId, CancellationToken cancellationToken)
         {
-            return await _context.Books.AsNoTracking().Where(b => b.AuthorId == authorId).ToListAsync();
+            return await _context.Books.AsNoTracking().Where(b => b.AuthorId == authorId).ToListAsync(cancellationToken);
         }
     }
 }
